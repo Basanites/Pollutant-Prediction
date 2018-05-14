@@ -1,11 +1,20 @@
-import plotly.offline as py
-import plotly.graph_objs as go
-import plotly.figure_factory as FF
-
-import numpy as np
+import matplotlib.pyplot as plt
+import numpy
+import scipy
 import pandas as pd
+import glob
 
 
-df = pd.read_csv('res/DE_NO2.csv', encoding='latin-1')
+df = pd.DataFrame()
 
-print(df.head(0))
+print('Loading CSVs\n')
+for file in glob.glob('res/*.csv'):
+    read = pd.read_csv(file,
+                 encoding="utf-16", parse_dates=[13, 14],
+                 infer_datetime_format=True,
+                 index_col=[5, 8, 13])
+    df = pd.concat([df, read[~read.index.get_level_values(0).str.contains('Bulk')]])
+print('\nFinished Loading')
+print('Sorting')
+df = df.sort_index()
+print('Finished sorting')
