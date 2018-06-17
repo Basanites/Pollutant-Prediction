@@ -1,5 +1,9 @@
 from abc import ABC, abstractmethod
+import pandas as pd
 from sklearn import neighbors, ensemble, tree
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from fbprophet import Prophet
 
 
 class Predictor(ABC):
@@ -50,18 +54,37 @@ class KNearestNeighborsPredictor(Predictor):
 
 
 class ETSPredictor(Predictor):
-    def predict(self):
-        pass
+    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y, trendtype, seasontype, seasonlength: int):
+        super(ETSPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+        self.model = ExponentialSmoothing(self.train['y'],
+                                          trend=trendtype,
+                                          seasonal=seasontype,
+                                          seasonal_periods=seasonlength).fit(optimized=True)
+
+    def predict(self, steps: int):
+        self.y_ = self.model.forecast(steps)
+        return self.y_
 
 
 class ARIMAPredictor(Predictor):
+    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y, order):
+        super(ARIMAPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+        self.model = ARIMA(traindata_x, order=order)
+
     def predict(self):
+        self.model = self.model.fit(disp=0)
         pass
 
 
 class ProphetPredictor(Predictor):
-    def predict(self):
-        pass
+    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y):
+        super(ProphetPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+        self.model = Prophet().fit(pd.DataFrame(data={'ds': self.train['x'], 'y': self.train['y']}))
+
+    def predict(self, steps: int):
+        future = self.model.make_future_dataframe(periods=steps, freq=self.train['x'].infer_freq(warn=False))
+        self.y_ = self.model.predict(future)['yhat']
+        return self.y_
 
 
 class LSTMPredictor(Predictor):
