@@ -1,7 +1,4 @@
-import tkinter as tk
+import controller as cont
 
-window = tk.Tk()
-window.title('Hello World')
-window.minsize(300, 300)
-
-window.mainloop()
+c = cont.Controller()
+c.run()
