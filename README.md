@@ -1,4 +1,4 @@
-# Bachelorthtesis
+# Bachelorthesis
 
 The purpose of this software is to enable a comparison of different statistical models for time series prediction.
 
