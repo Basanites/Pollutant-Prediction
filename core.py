@@ -1,4 +1,5 @@
 import controller as cont
 
-c = cont.Controller()
-c.run()
+if __name__ == '__main__':
+    c = cont.Controller()
+    c.run()
