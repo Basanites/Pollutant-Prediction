@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def import_eea_weatherdata_csv(location: str):
     read = pd.read_csv(location,
                        encoding="utf-16", parse_dates=[13, 14],
@@ -26,7 +27,8 @@ def import_eea_weatherdata_csv(location: str):
     clean.columns.names = [None, 'Pollutant']
     return clean.sort_index()
 
-def import_EEA_weatherdata_csvs(locations):
+
+def import_eea_weatherdata_csvs(locations):
     df = pd.DataFrame()
 
     for location in locations:
