@@ -37,4 +37,4 @@ class View:
         self.files = new_files
 
     def update_db_view(self, dataframe):
-        self.ui.text_browser.setText(str(dataframe))
+        pass
