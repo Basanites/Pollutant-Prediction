@@ -12,5 +12,6 @@ class Controller:
         self.view.run()
 
     def load_csv(self, location):
-        self.model.import_csvs(location)
-        self.view.update_db_view(self.model.df)
+        if location:
+            self.model.import_csvs(location)
+            self.view.update_db_view(self.model.df)
