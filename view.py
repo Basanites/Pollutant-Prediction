@@ -26,8 +26,8 @@ class View:
         self.ui.line_edit.textEdited.connect(self.set_files)
 
     def load_csvs(self):
-        dlg = QtWidgets.QFileDialog(caption='CSVs', filter='*.csv')
-        dlg.setFileMode(QtWidgets.QFileDialog.AnyFile)
+        dlg = QtWidgets.QFileDialog(caption='Open CSVs', filter='*.csv')
+        dlg.setFileMode(QtWidgets.QFileDialog.ExistingFiles)
 
         if dlg.exec_():
             self.set_files(dlg.selectedFiles())
