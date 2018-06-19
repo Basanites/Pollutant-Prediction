@@ -32,7 +32,8 @@ def import_eea_weatherdata_csvs(locations):
     df = pd.DataFrame()
 
     for location in locations:
+        print(location)
         df = pd.concat([df, import_eea_weatherdata_csv(location)])
 
     df = df.sort_index()
-    return df.groupby(level=[0, 1]).first().flatten()
+    return df.groupby(level=[0, 1]).first()

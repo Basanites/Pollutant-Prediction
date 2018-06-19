@@ -7,3 +7,6 @@ class Model:
 
     def import_csv(self, location):
         self.df = import_eea_weatherdata_csv(location)
+
+    def import_csvs(self, locations):
+        self.df = import_eea_weatherdata_csvs(locations)
