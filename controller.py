@@ -5,7 +5,7 @@ import view as v
 class Controller:
     def __init__(self):
         self.model = m.Model()
-        self.view = v.Ui_MainWindow()
+        self.view = v.View()
 
     def run(self):
         self.view.run()
