@@ -58,6 +58,9 @@
         <string>Import</string>
        </attribute>
        <layout class="QGridLayout" name="gridLayout">
+        <property name="rightMargin">
+         <number>9</number>
+        </property>
         <item row="0" column="0">
          <widget class="QWidget" name="widget" native="true">
           <property name="maximumSize">
@@ -125,11 +128,27 @@
        <attribute name="title">
         <string>Statistics</string>
        </attribute>
+       <layout class="QGridLayout" name="gridLayout_4">
+        <item row="0" column="0">
+         <widget class="QStackedWidget" name="stackedWidget">
+          <widget class="QWidget" name="selection_page"/>
+          <widget class="QWidget" name="display_page"/>
+         </widget>
+        </item>
+       </layout>
       </widget>
       <widget class="QWidget" name="predictions_tab">
        <attribute name="title">
         <string>Predictions</string>
        </attribute>
+       <layout class="QGridLayout" name="gridLayout_5">
+        <item row="0" column="0">
+         <widget class="QStackedWidget" name="stackedWidget_2">
+          <widget class="QWidget" name="selection_page_2"/>
+          <widget class="QWidget" name="display_page_2"/>
+         </widget>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>
