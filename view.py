@@ -1,5 +1,5 @@
 import mainwindow as m
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets
 import sys
 
 
@@ -36,5 +36,5 @@ class View:
     def set_files(self, new_files):
         self.files = new_files
 
-    def update_db_view(self, dataframe):
-        pass
+    def update_db_view(self, html_dataframe):
+        self.ui.html_view.setHtml(html_dataframe)

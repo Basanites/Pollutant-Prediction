@@ -18,6 +18,7 @@ class Ui_main_window(object):
         self.centralwidget = QtWidgets.QWidget(main_window)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout_3 = QtWidgets.QGridLayout(self.centralwidget)
+        self.gridLayout_3.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_3.setObjectName("gridLayout_3")
         self.tab_widget = QtWidgets.QTabWidget(self.centralwidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -36,6 +37,7 @@ class Ui_main_window(object):
         self.widget.setObjectName("widget")
         self.formLayout = QtWidgets.QFormLayout(self.widget)
         self.formLayout.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
+        self.formLayout.setContentsMargins(0, -1, 0, -1)
         self.formLayout.setObjectName("formLayout")
         self.file_select_button = QtWidgets.QPushButton(self.widget)
         self.file_select_button.setObjectName("file_select_button")
@@ -54,11 +56,9 @@ class Ui_main_window(object):
         self.display_tab.setObjectName("display_tab")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.display_tab)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.df_table_widget = QtWidgets.QTableWidget(self.display_tab)
-        self.df_table_widget.setObjectName("df_table_widget")
-        self.df_table_widget.setColumnCount(0)
-        self.df_table_widget.setRowCount(0)
-        self.gridLayout_2.addWidget(self.df_table_widget, 0, 0, 1, 1)
+        self.html_view = QtWebEngineWidgets.QWebEngineView(self.display_tab)
+        self.html_view.setObjectName("html_view")
+        self.gridLayout_2.addWidget(self.html_view, 0, 0, 1, 1)
         self.tab_widget.addTab(self.display_tab, "")
         self.statistics_tab = QtWidgets.QWidget()
         self.statistics_tab.setObjectName("statistics_tab")
@@ -86,6 +86,7 @@ class Ui_main_window(object):
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.statistics_tab), _translate("main_window", "Statistics"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.predictions_tab), _translate("main_window", "Predictions"))
 
+from PyQt5 import QtWebEngineWidgets
 
 if __name__ == "__main__":
     import sys

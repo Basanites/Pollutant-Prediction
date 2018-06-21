@@ -14,4 +14,4 @@ class Controller:
     def load_csvs(self, locations):
         if locations:
             self.model.import_csvs(locations)
-            self.view.update_db_view(self.model.df)
+            self.view.update_db_view(self.model.df.to_html())
