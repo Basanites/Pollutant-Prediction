@@ -102,7 +102,7 @@ class Ui_main_window(object):
     def retranslateUi(self, main_window):
         _translate = QtCore.QCoreApplication.translate
         main_window.setWindowTitle(_translate("main_window", "MainWindow"))
-        self.file_select_button.setText(_translate("main_window", "Select File"))
+        self.file_select_button.setText(_translate("main_window", "Select File(s)"))
         self.import_button.setText(_translate("main_window", "Import"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.import_tab), _translate("main_window", "Import"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.display_tab), _translate("main_window", "Display"))

@@ -21,6 +21,9 @@ class View:
         # tabs
         self.ui.tab_widget.currentChanged.connect(tab_callback)
 
+        # statistics_stack
+        # prediction_stack
+
         # buttons
         self.ui.file_select_button.clicked.connect(self.select_csvs)
         self.ui.import_button.clicked.connect(lambda: load_callback(self.files))
