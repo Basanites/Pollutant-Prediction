@@ -17,15 +17,18 @@ class View:
         self.main_window.show()
         sys.exit(self.app.exec_())
 
-    def init_functionalities(self, load_callback):
+    def init_functionalities(self, load_callback, tab_callback):
+        # tabs
+        self.ui.tab_widget.currentChanged.connect(tab_callback)
+
         # buttons
-        self.ui.file_select_button.clicked.connect(self.load_csvs)
+        self.ui.file_select_button.clicked.connect(self.select_csvs)
         self.ui.import_button.clicked.connect(lambda: load_callback(self.files))
 
         # line edit
         self.ui.line_edit.textEdited.connect(self.set_files)
 
-    def load_csvs(self):
+    def select_csvs(self):
         dlg = QtWidgets.QFileDialog(caption='Open CSVs', filter='*.csv')
         dlg.setFileMode(QtWidgets.QFileDialog.ExistingFiles)
 
