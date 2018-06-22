@@ -17,4 +17,4 @@ class Controller:
 
     def tabchanged(self, tab_id):
         if tab_id == 1 and self.model.df is not None:
-            self.view.update_db_view(self.model.df.to_html())
+            self.view.update_db_view(self.model.df)

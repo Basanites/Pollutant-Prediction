@@ -1,4 +1,5 @@
 import mainwindow as m
+import qtpandas.models.DataFrameModel as dm
 from PyQt5 import QtWidgets
 import sys
 
@@ -42,5 +43,5 @@ class View:
     def set_files(self, new_files):
         self.files = new_files
 
-    def update_db_view(self, html_dataframe):
-        self.ui.html_view.setHtml(html_dataframe)
+    def update_db_view(self, dataframe):
+        self.ui.tableView.setModel(dm.DataFrameModel(dataframe))

@@ -57,9 +57,9 @@ class Ui_main_window(object):
         self.display_tab.setObjectName("display_tab")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.display_tab)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.html_view = QtWebEngineWidgets.QWebEngineView(self.display_tab)
-        self.html_view.setObjectName("html_view")
-        self.gridLayout_2.addWidget(self.html_view, 0, 0, 1, 1)
+        self.tableView = QtWidgets.QTableView(self.display_tab)
+        self.tableView.setObjectName("tableView")
+        self.gridLayout_2.addWidget(self.tableView, 0, 0, 1, 1)
         self.tab_widget.addTab(self.display_tab, "")
         self.statistics_tab = QtWidgets.QWidget()
         self.statistics_tab.setObjectName("statistics_tab")
@@ -69,6 +69,20 @@ class Ui_main_window(object):
         self.stackedWidget.setObjectName("stackedWidget")
         self.selection_page = QtWidgets.QWidget()
         self.selection_page.setObjectName("selection_page")
+        self.formLayout_2 = QtWidgets.QFormLayout(self.selection_page)
+        self.formLayout_2.setObjectName("formLayout_2")
+        self.label = QtWidgets.QLabel(self.selection_page)
+        self.label.setObjectName("label")
+        self.formLayout_2.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label)
+        self.comboBox = QtWidgets.QComboBox(self.selection_page)
+        self.comboBox.setObjectName("comboBox")
+        self.formLayout_2.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.comboBox)
+        self.label_2 = QtWidgets.QLabel(self.selection_page)
+        self.label_2.setObjectName("label_2")
+        self.formLayout_2.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.label_2)
+        self.comboBox_2 = QtWidgets.QComboBox(self.selection_page)
+        self.comboBox_2.setObjectName("comboBox_2")
+        self.formLayout_2.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.comboBox_2)
         self.stackedWidget.addWidget(self.selection_page)
         self.display_page = QtWidgets.QWidget()
         self.display_page.setObjectName("display_page")
@@ -97,6 +111,7 @@ class Ui_main_window(object):
 
         self.retranslateUi(main_window)
         self.tab_widget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(main_window)
 
     def retranslateUi(self, main_window):
@@ -106,10 +121,11 @@ class Ui_main_window(object):
         self.import_button.setText(_translate("main_window", "Import"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.import_tab), _translate("main_window", "Import"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.display_tab), _translate("main_window", "Display"))
+        self.label.setText(_translate("main_window", "Select Station"))
+        self.label_2.setText(_translate("main_window", "Select Pollutor"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.statistics_tab), _translate("main_window", "Statistics"))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.predictions_tab), _translate("main_window", "Predictions"))
 
-from PyQt5 import QtWebEngineWidgets
 
 if __name__ == "__main__":
     import sys

@@ -120,7 +120,7 @@
        </attribute>
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="0" column="0">
-         <widget class="QWebEngineView" name="html_view" native="true"/>
+         <widget class="QTableView" name="tableView"/>
         </item>
        </layout>
       </widget>
@@ -131,7 +131,33 @@
        <layout class="QGridLayout" name="gridLayout_4">
         <item row="0" column="0">
          <widget class="QStackedWidget" name="stackedWidget">
-          <widget class="QWidget" name="selection_page"/>
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="selection_page">
+           <layout class="QFormLayout" name="formLayout_2">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>Select Station</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="comboBox"/>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="label_2">
+              <property name="text">
+               <string>Select Pollutor</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboBox_2"/>
+            </item>
+           </layout>
+          </widget>
           <widget class="QWidget" name="display_page"/>
          </widget>
         </item>
@@ -156,14 +182,6 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>QWebEngineView</class>
-   <extends>QWidget</extends>
-   <header location="global">qwebengineview.h</header>
-   <container>1</container>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
