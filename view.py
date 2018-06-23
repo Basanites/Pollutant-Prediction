@@ -21,13 +21,6 @@ class View:
         # tabs
         self.ui.tab_widget.currentChanged.connect(tab_callback)
 
-        # data table view
-       # self.ui.table_view = dv.DataTableWidget(self.ui.display_tab)
-       # self.ui.table_view.setObjectName("table_view")
-      #  self.ui.gridLayout_2.addWidget(self.ui.table_view, 0, 0, 1, 1)
-       # MultiIndexHeaderView(QtCore.Qt.Horizontal, self.ui.table_view)
-       # MultiIndexHeaderView(QtCore.Qt.Vertical, self.ui.table_view)
-
         # statistics_stack
         # prediction_stack
 
