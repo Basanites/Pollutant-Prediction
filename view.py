@@ -1,8 +1,7 @@
 import mainwindow as m
-import qtpandas.models.DataFrameModel as dm
-from PyQt5 import QtWidgets
+from data.pandasmodel import PandasModel
+from PyQt5 import QtWidgets, QtCore
 import sys
-
 
 class View:
     def __init__(self):
@@ -21,6 +20,13 @@ class View:
     def init_functionalities(self, load_callback, tab_callback):
         # tabs
         self.ui.tab_widget.currentChanged.connect(tab_callback)
+
+        # data table view
+       # self.ui.table_view = dv.DataTableWidget(self.ui.display_tab)
+       # self.ui.table_view.setObjectName("table_view")
+      #  self.ui.gridLayout_2.addWidget(self.ui.table_view, 0, 0, 1, 1)
+       # MultiIndexHeaderView(QtCore.Qt.Horizontal, self.ui.table_view)
+       # MultiIndexHeaderView(QtCore.Qt.Vertical, self.ui.table_view)
 
         # statistics_stack
         # prediction_stack
@@ -44,4 +50,4 @@ class View:
         self.files = new_files
 
     def update_db_view(self, dataframe):
-        self.ui.tableView.setModel(dm.DataFrameModel(dataframe))
+        self.ui.table_view.setModel(PandasModel(dataframe))

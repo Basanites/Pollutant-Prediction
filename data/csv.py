@@ -2,10 +2,24 @@ import pandas as pd
 
 
 def import_eea_weatherdata_csv(location: str):
+    df = _import_single_eea_weatherdata_csv(location)
+    return _tidy_up(df)
+
+
+def import_eea_weatherdata_csvs(locations):
+    df = pd.DataFrame()
+
+    for location in locations:
+        df = pd.concat([df, _import_single_eea_weatherdata_csv(location)])
+
+    return _tidy_up(df)
+
+
+def _import_single_eea_weatherdata_csv(location: str):
     read = pd.read_csv(location,
                        encoding="utf-16", parse_dates=[13, 14],
                        infer_datetime_format=True,
-                       index_col=[4, 14])
+                       index_col=[14])
 
     # drop 'bulk' files because they have different averaging
     bulks = read.SamplingPoint.str.lower().str.contains('bulk')
@@ -19,22 +33,14 @@ def import_eea_weatherdata_csv(location: str):
                         'AveragingTime'],
                inplace=True)
 
-    # make pollutant a column for better memory usage
-    clean = clean.pivot(columns='AirPollutant')
+    return clean
+
+
+def _tidy_up(dataframe):
+    df = dataframe.pivot_table(columns='AirPollutant',
+                               index=[dataframe.index, 'AirQualityStationEoICode', 'UnitOfMeasurement'],
+                               values='Concentration').reset_index(level=[1, 2])
 
     # use shorter names
-    clean.index.names = ['StationEoI', 'Timestamp']
-    clean.columns.names = [None, 'Pollutant']
-    return clean.sort_index()
-
-
-def import_eea_weatherdata_csvs(locations):
-    df = pd.DataFrame()
-
-    for location in locations:
-        print(location)
-        df = pd.concat([df, import_eea_weatherdata_csv(location)])
-
-    df = df.sort_index()
-    df = df.groupby(level=[0, 1]).first()
-    return df
+    df.index.names = ['Timestamp']
+    return df.sort_index()
