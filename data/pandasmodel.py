@@ -1,5 +1,6 @@
 from PyQt5 import QtCore
 
+
 class PandasModel(QtCore.QAbstractTableModel):
     def __init__(self, data, parent=None):
         QtCore.QAbstractTableModel.__init__(self, parent)
@@ -13,7 +14,7 @@ class PandasModel(QtCore.QAbstractTableModel):
 
     def data(self, index, role=QtCore.Qt.DisplayRole):
         if index.isValid() and role == QtCore.Qt.DisplayRole:
-                return str(self._data.values[index.row()][index.column()])
+            return str(self._data.values[index.row()][index.column()])
         return QtCore.QVariant()
 
     def headerData(self, col, orientation, role=None):

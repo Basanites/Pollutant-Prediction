@@ -17,4 +17,6 @@ class Controller:
 
     def tabchanged(self, tab_id):
         if tab_id == 1 and self.model.df is not None:
-            self.view.update_db_view(self.model.df)
+            df = self.model.df.reset_index()
+            df['Timestamp'] = df['Timestamp'].apply(str)
+            self.view.update_db_view(df)
