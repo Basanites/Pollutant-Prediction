@@ -15,6 +15,10 @@ class Model:
     def import_csvs(self, locations):
         self.df = self.import_eea_weatherdata_csvs(locations)
 
+    def get_concentration_series(self, station, pollutant):
+        series = self.df[self.df.AirQualityStationEoICode == station][pollutant]
+        return series[series.notna()]
+
     def get_stations(self):
         return self.df.AirQualityStationEoICode.unique()
 
