@@ -13,7 +13,7 @@ class Controller(Observer):
         self.view.observable.register(self, 'combobox_changed', self.change_combobox)
         self.view.observable.register(self, 'button_clicked', self.click_button)
         self.model.observable.register(self, 'import', self.view.update_statusbar)
-        self.model.observable.register(self, 'import', self.view.update_statusbar)
+        self.model.observable.register(self, 'cleanup', self.view.update_statusbar)
         self.tab_needs_update = [False] * 4
 
     def run(self):
