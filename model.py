@@ -1,4 +1,3 @@
-# from data.csv import import_eea_weatherdata_csv, import_eea_weatherdata_csvs
 import pandas as pd
 from util.communication import *
 

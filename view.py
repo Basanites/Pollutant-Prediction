@@ -1,9 +1,8 @@
 import mainwindow as m
 from util.communication import *
 from data.pandasmodel import PandasModel
-import matplotlib.pyplot as plt
 from PyQt5 import QtWidgets
-from matplotlib.backends.qt_compat import QtCore, QtWidgets, is_pyqt5
+from matplotlib.backends.qt_compat import QtWidgets, is_pyqt5
 from matplotlib.figure import Figure
 import sys
 
@@ -57,9 +56,6 @@ class View:
 
     def set_files(self, new_files):
         self.files = new_files
-
-    #def switch_stacked_view(self, index):
-    #    self.ui.stackedWidget.setCurrentIndex(index)
 
     def update_db_view(self, dataframe):
         self.update_statusbar('Loading Table View')
