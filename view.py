@@ -1,7 +1,9 @@
 import mainwindow as m
+from util.communication import *
 from data.pandasmodel import PandasModel
 from PyQt5 import QtWidgets
 from matplotlib.backends.qt_compat import QtCore, QtWidgets, is_pyqt5
+import sys
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import (
@@ -9,7 +11,6 @@ if is_pyqt5():
 else:
     from matplotlib.backends.backend_qt4agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
-import sys
 
 
 class View:
@@ -21,26 +22,18 @@ class View:
         self.ui.setupUi(self.main_window)
         self.main_window.setWindowTitle('Predictive Analysis')
         self.files = None
+        self.events = list(['tab_changed', 'combobox_changed', 'button_clicked'])
+        self.observable = Observable(self.events)
 
     def run(self):
         self.main_window.show()
         sys.exit(self.app.exec_())
 
-    def init_functionalities(self, load_callback, tab_callback, combobox_callback):
-        # tabs
-        self.ui.tab_widget.currentChanged.connect(tab_callback)
-
-        # statistics_stack
-        ## comboboxes
-        self.ui.station_combobox.currentTextChanged.connect(combobox_callback)
-
-        # prediction_stack
-
-        # buttons
+    def init_functionalities(self):
+        self.ui.tab_widget.currentChanged.connect(lambda tab: self.observable.notify('tab_changed', tab))
+        self.ui.station_combobox.currentTextChanged.connect(lambda text: self.observable.notify('combobox_changed', text))
         self.ui.file_select_button.clicked.connect(self.select_csvs)
-        self.ui.import_button.clicked.connect(lambda: load_callback(self.files))
-
-        # line edit
+        self.ui.import_button.clicked.connect(lambda: self.observable.notify('button_clicked', 'import'))
         self.ui.line_edit.textEdited.connect(self.set_files)
 
     def select_csvs(self):
@@ -57,8 +50,9 @@ class View:
     def update_db_view(self, dataframe):
         self.ui.table_view.setModel(PandasModel(dataframe))
 
-    def update_selector_comboboxes(self, stations):
+    def update_selector_comboboxes(self, stations, pollutants):
         self.update_station_combobox(stations)
+        self.update_pollutant_combobox(pollutants)
         self.ui.station_combobox.currentTextChanged.emit(self.ui.station_combobox.currentText())
 
     def update_pollutant_combobox(self, pollutants):
