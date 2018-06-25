@@ -48,7 +48,9 @@ class View:
         self.files = new_files
 
     def update_db_view(self, dataframe):
+        self.update_statusbar('Loading Table View')
         self.ui.table_view.setModel(PandasModel(dataframe))
+        self.update_statusbar('')
 
     def update_selector_comboboxes(self, stations, pollutants):
         self.update_station_combobox(stations)
