@@ -32,7 +32,7 @@ class Model:
         df = pd.DataFrame()
 
         for i, location in enumerate(locations):
-            self.observable.notify('import', 'Importing File: {0} \t{1}/{2}'.format(location, i, len(locations)))
+            self.observable.notify('import', 'Importing File {}/{}'.format(i + 1, len(locations)))
             df = pd.concat([df, self._import_single_eea_weatherdata_csv(location)])
 
         return self._tidy_up(df)

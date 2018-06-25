@@ -12,6 +12,8 @@ class Controller(Observer):
         self.view.observable.register(self, 'tab_changed', self.change_tab)
         self.view.observable.register(self, 'combobox_changed', self.change_combobox)
         self.view.observable.register(self, 'button_clicked', self.click_button)
+        self.model.observable.register(self, 'import', self.view.update_statusbar)
+        self.model.observable.register(self, 'import', self.view.update_statusbar)
         self.tab_needs_update = [False] * 4
 
     def run(self):
@@ -21,6 +23,7 @@ class Controller(Observer):
         if locations:
             self.model.import_csvs(locations)
             self.tab_needs_update[1:3] = [True] * 2
+        self.view.update_statusbar('')
 
     def click_button(self, button_id):
         if button_id == 'import':

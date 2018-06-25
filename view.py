@@ -62,3 +62,6 @@ class View:
     def update_station_combobox(self, stations):
         self.ui.station_combobox.clear()
         self.ui.station_combobox.addItems(stations)
+
+    def update_statusbar(self, text):
+        self.ui.statusbar.showMessage(text)
