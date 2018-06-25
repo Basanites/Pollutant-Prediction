@@ -4,7 +4,7 @@ from util.communication import *
 
 class Model:
     def __init__(self):
-        self.events = list(['import', 'cleanup', 'filtering'])
+        self.events = list(['import', 'cleanup', 'filtering', 'finished'])
         self.observable = Observable(self.events)
         self.df = None
 
@@ -38,6 +38,7 @@ class Model:
             self.observable.notify('import', 'Importing File {}/{}'.format(i + 1, len(locations)))
             df = pd.concat([df, self._import_single_eea_weatherdata_csv(location)])
 
+        self.observable.notify('finished', 'Finished loading')
         return self._tidy_up(df)
 
     def _import_single_eea_weatherdata_csv(self, location: str):
@@ -68,4 +69,5 @@ class Model:
 
         # use shorter names
         df.index.names = ['Timestamp']
+        self.observable.notify('finished', 'Finished cleaning up data')
         return df.sort_index()

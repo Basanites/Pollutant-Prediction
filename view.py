@@ -23,7 +23,7 @@ class View:
         self.ui.setupUi(self.main_window)
         self.main_window.setWindowTitle('Predictive Analysis')
         self.files = None
-        self.events = list(['tab_changed', 'combobox_changed', 'button_clicked'])
+        self.events = list(['tab_changed', 'combobox_changed', 'button_clicked', 'plotting', 'finished'])
         self.observable = Observable(self.events)
 
         self.ui.display_layout = QtWidgets.QVBoxLayout(self.ui.display_page)
@@ -58,21 +58,23 @@ class View:
         self.files = new_files
 
     def update_db_view(self, dataframe):
-        self.update_statusbar('Loading Table View')
+        self.observable.notify('plotting', 'Plotting table view')
         self.ui.table_view.setModel(PandasModel(dataframe))
-        self.update_statusbar('')
+        self.observable.notify('finished', 'Finished plotting table view')
 
     def get_plot_settings(self):
         return {'station': self.ui.station_combobox.currentText(),
                 'pollutant': self.ui.pollutant_combobox.currentText()}
 
     def update_plot_canvas(self, series):
+        self.observable.notify('plotting', 'Plotting data')
         self.ui.figure.clear()
         ax = self.ui.figure.add_subplot(111)
         x = series.index
         ax.plot(x, series, '.-')
         ax.set_title('Plot')
         self.ui.static_canvas.draw()
+        self.observable.notify('finished', 'Finished plotting selected data')
 
     def update_selector_comboboxes(self, stations, pollutants):
         self.update_station_combobox(stations)
@@ -87,5 +89,5 @@ class View:
         self.ui.station_combobox.clear()
         self.ui.station_combobox.addItems(stations)
 
-    def update_statusbar(self, text):
-        self.ui.statusbar.showMessage(text)
+    def update_statusbar(self, text, msecs=0):
+        self.ui.statusbar.showMessage(text, msecs)

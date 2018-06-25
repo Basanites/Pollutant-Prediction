@@ -12,8 +12,11 @@ class Controller(Observer):
         self.view.observable.register(self, 'tab_changed', self.change_tab)
         self.view.observable.register(self, 'combobox_changed', self.change_combobox)
         self.view.observable.register(self, 'button_clicked', self.click_button)
+        self.view.observable.register(self, 'plotting', self.view.update_statusbar)
+        self.view.observable.register(self, 'finished', lambda x: self.view.update_statusbar(x, 2000))
         self.model.observable.register(self, 'import', self.view.update_statusbar)
         self.model.observable.register(self, 'cleanup', self.view.update_statusbar)
+        self.model.observable.register(self, 'finished', lambda x: self.view.update_statusbar(x, 2000))
         self.tab_needs_update = [False] * 4
 
     def run(self):
@@ -22,7 +25,6 @@ class Controller(Observer):
     def load_csvs(self, locations):
         if locations:
             self.model.import_csvs(locations)
-        self.view.update_statusbar('')
 
     def click_button(self, button_id):
         if button_id == 'import':
