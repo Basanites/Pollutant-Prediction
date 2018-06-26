@@ -42,32 +42,40 @@ class Model:
         return self._tidy_up(df)
 
     def _import_single_eea_weatherdata_csv(self, location: str):
-        read = pd.read_csv(location,
+        read = self._read_whole_csv(location)
+        clean = self._drop_unneccessary_entries(read)
+        return self._drop_unneccessary_columns(clean)
+
+    def _read_whole_csv(self, location):
+        return pd.read_csv(location,
                            encoding="utf-16", parse_dates=[13, 14],
                            infer_datetime_format=True,
                            index_col=[14])
 
-        # drop 'bulk' files because they have different averaging
-        bulks = read.SamplingPoint.str.lower().str.contains('bulk')
-        clean = read[~bulks].copy()
+    def _drop_unneccessary_entries(self, df):
+        bulks = df.SamplingPoint.str.lower().str.contains('bulk')
+        return df[~bulks].copy()
 
-        # ignore unnecessary columns
-        clean.drop(columns=['Countrycode', 'Namespace', 'AirQualityNetwork',
+    def _drop_unneccessary_columns(self, df):
+        return df.drop(columns=['Countrycode', 'Namespace', 'AirQualityNetwork',
                             'AirQualityStation', 'SamplingPoint', 'Sample',
                             'SamplingProcess', 'AirPollutantCode',
                             'DatetimeBegin', 'Validity', 'Verification',
                             'AveragingTime'],
                    inplace=True)
 
-        return clean
-
-    def _tidy_up(self, dataframe):
+    def _tidy_up(self, df):
         self.observable.notify('cleanup', 'Cleaning up Dataframe')
-        df = dataframe.pivot_table(columns='AirPollutant',
-                                   index=[dataframe.index, 'AirQualityStationEoICode', 'UnitOfMeasurement'],
-                                   values='Concentration').reset_index(level=[1, 2])
-
-        # use shorter names
-        df.index.names = ['Timestamp']
+        df = self._descriptors_as_columns(df)
+        self._set_short_names(df)
         self.observable.notify('finished', 'Finished cleaning up data')
         return df.sort_index()
+
+    def _descriptors_as_columns(self, df):
+        return df.pivot_table(columns='AirPollutant',
+                                   index=[df.index, 'AirQualityStationEoICode', 'UnitOfMeasurement'],
+                                   values='Concentration').reset_index(level=[1, 2])
+
+    def _set_short_names(self, df):
+        df.index.names = ['Timestamp']
+
