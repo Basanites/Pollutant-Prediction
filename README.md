@@ -14,5 +14,5 @@ The GUI has options to:
 
 To start the program simply run 
 ```
-python3 core.py
+python3 main.py
 ```
