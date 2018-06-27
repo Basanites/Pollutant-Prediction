@@ -7,7 +7,7 @@ It is built around a GUI which lets the user import time series (at the moment o
 The GUI has options to:
 - [x] select which files should be imported
 - [x] navigate and visualize the imported dataframe
-- [ ] display statistical plots (decomposition, acf, pacf, ...)
+- [x] display statistical plots (decomposition, acf, pacf, ...)
 - [ ] plot predictions and raw data
 - [ ] present information on the accuracy of a prediction model
 - [ ] compare different prediction models

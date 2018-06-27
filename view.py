@@ -4,6 +4,9 @@ from data.pandasmodel import PandasModel
 from PyQt5 import QtWidgets
 from matplotlib.backends.qt_compat import QtWidgets, is_pyqt5
 from matplotlib.figure import Figure
+from statsmodels.tsa.seasonal import seasonal_decompose
+from statsmodels.tsa.stattools import acf, pacf
+import numpy as np
 import sys
 
 if is_pyqt5():
@@ -67,12 +70,35 @@ class View:
                 'pollutant': self.ui.pollutant_combobox.currentText()}
 
     def update_plot_canvas(self, series):
+        series = series.asfreq(freq='1H', fill_value=np.nan).interpolate(method='time')
         self.observable.notify('plotting', 'Plotting data')
         self.ui.figure.clear()
-        ax = self.ui.figure.add_subplot(111)
+        ax = self.ui.figure.add_subplot(611)
         x = series.index
-        ax.plot(x, series, '.-')
-        ax.set_title('Plot')
+        ax.plot(x, series, '-')
+        ax.set_title('observed', rotation='vertical',x=-0.1,y=0.5)
+        decomp = seasonal_decompose(series, model='additive', freq=24*7)
+        ax2 = self.ui.figure.add_subplot(612)
+        ax2.plot(x, decomp.seasonal, '-')
+        ax2.set_title('seasonal', rotation='vertical',x=-0.1,y=0.5)
+        ax3 = self.ui.figure.add_subplot(613)
+        ax3.plot(x, decomp.trend, '-')
+        ax3.set_title('trend', rotation='vertical',x=-0.1,y=0.5)
+        ax4 = self.ui.figure.add_subplot(614)
+        ax4.plot(x, decomp.resid, '-')
+        ax4.set_title('residual', rotation='vertical',x=-0.1,y=0.5)
+        autocorr = acf(series, nlags=24, alpha=0.05)
+        ax5 = self.ui.figure.add_subplot(615)
+        ax5.plot(range(0, 25), autocorr[0], '.-')
+        #ax5.plot(range(0, 25), autocorr[1], '-', color='r')
+        ax5.set_title('acf', rotation='vertical',x=-0.1,y=0.5)
+        pautocorr = pacf(series, nlags=24, alpha=0.05)
+        ax6 = self.ui.figure.add_subplot(616)
+        ax6.plot(range(0, 25), pautocorr[0], '.-')
+        #ax6.plot(range(0,25), pautocorr[1], '-', color='r')
+        ax6.set_title('pacf', rotation='vertical',x=-0.1,y=0.5)
+
+
         self.ui.static_canvas.draw()
         self.observable.notify('finished', 'Finished plotting selected data')
 
