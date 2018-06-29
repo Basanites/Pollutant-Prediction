@@ -6,7 +6,9 @@ from matplotlib.backends.qt_compat import QtWidgets, is_pyqt5
 from matplotlib.figure import Figure
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.stattools import acf, pacf
+from scipy.stats import norm
 import numpy as np
+import math as math
 import sys
 
 if is_pyqt5():
@@ -90,12 +92,12 @@ class View:
         autocorr = acf(series, nlags=24, alpha=0.05)
         ax5 = self.ui.figure.add_subplot(615)
         ax5.plot(range(0, 25), autocorr[0], '.-')
-        #ax5.plot(range(0, 25), autocorr[1], '-', color='r')
+        ax5.plot(range(0, 25), [norm.ppf((1 + 0.95) / 2) / math.sqrt(len(series))] * 25, '--', color='r')
         ax5.set_title('acf', rotation='vertical',x=-0.1,y=0.5)
         pautocorr = pacf(series, nlags=24, alpha=0.05)
         ax6 = self.ui.figure.add_subplot(616)
         ax6.plot(range(0, 25), pautocorr[0], '.-')
-        #ax6.plot(range(0,25), pautocorr[1], '-', color='r')
+        ax6.plot(range(0, 25), [norm.ppf((1 + 0.95) / 2) / math.sqrt(len(series))] * 25, '--', color='r')
         ax6.set_title('pacf', rotation='vertical',x=-0.1,y=0.5)
 
 
