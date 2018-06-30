@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from model import Model
+from util.openaq import get_station_coordinates
 
 app = Flask(__name__)
 
@@ -7,38 +8,42 @@ app = Flask(__name__)
 @app.route('/predict')
 def predict():
     station = request.args.get('station')
-    interval = request.args.get('interval')
+    pollutant = request.args.get('pollutant')
+    forecast_steps = request.args.get('forecast_steps')
     type = request.args.get('type')
-    coordinates = request.args.get('coordinates')
+    coordinates = get_station_coordinates(station)
+
 
     return jsonify({
         'type': 'Feature',
         'geometry': {
             'type': 'Point',
-            'coordinates': [1, 1]
+            'coordinates': coordinates
         },
         'properties': {
             'station': station,
-            'interval': interval,
-            'model': type,
-            'coordinates': coordinates,
-            'uri': '/predict?{}&{}&{}'.format(station, interval, type)
+            'pollutant': pollutant,
+            'forecast_steps': forecast_steps,
+            'type': type,
+            'uri': '/predict?{}&{}&{}'.format(station, forecast_steps, type)
         }
     })
 
 @app.route('/pollutants')
 def get_pollutants():
     station = request.args['station']
+    coordinates = get_station_coordinates(station)
+    pollutants = str(model.get_stations_pollutant(station))
 
     return jsonify({
         'type': 'Feature',
         'geometry': {
             'type': 'Point',
-            'coordinates': [1, 1]
+            'coordinates': coordinates
         },
         'properties': {
             'station': station,
-            'pollutants': str(model.get_stations_pollutant(station))
+            'pollutants': pollutants
         }
     })
 
