@@ -25,7 +25,7 @@ class Model:
         return self.df.columns[2:]
 
     def get_stations_pollutant(self, station):
-        return self.df[self.df.AirQualityStationEoICode == station].dropna(1, how='all').columns[2:]
+        return self.df[self.df.AirQualityStationEoICode == station].dropna(1, how='all').columns[2:].values
 
     def import_eea_weatherdata_csv(self, location: str):
         df = self._import_single_eea_weatherdata_csv(location)
