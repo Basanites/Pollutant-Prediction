@@ -17,29 +17,20 @@ def not_found(error=None):
     return resp
 
 
-@app.route('/predict')
-def predict():
+@app.route('/forecast')
+def forecast():
     station = request.args.get('station')
     pollutant = request.args.get('pollutant')
     forecast_steps = request.args.get('forecast_steps')
     type = request.args.get('type')
     coordinates = get_station_coordinates(station)
+    base_uri = request.base_url
+    properties = {'station': station,
+                  'pollutant': pollutant,
+                  'type': type,
+                  'forecast_steps': forecast_steps}
 
-    return jsonify({
-        'type': 'Feature',
-        'geometry': {
-            'type': 'Point',
-            'coordinates': coordinates
-        },
-        'properties': {
-            'station': station,
-            'pollutant': pollutant,
-            'forecast_steps': forecast_steps,
-            'type': type,
-            'uri': '{0}?station={1}&pollutant={2}&forecast_steps={3}&type={4}'.format(request.base_url, station,
-                                                                                      pollutant, forecast_steps, type)
-        }
-    })
+    return jsonify(_build_geoJSON(coordinates, properties, base_uri))
 
 
 @app.route('/pollutants')
@@ -47,32 +38,39 @@ def get_pollutants():
     station = request.args['station']
     coordinates = get_station_coordinates(station)
     pollutants = str(model.get_stations_pollutant(station))
+    base_uri = request.base_url
+    properties = {'station': station,
+                  'pollutants': pollutants}
 
-    return jsonify({
-        'type': 'Feature',
-        'geometry': {
-            'type': 'Point',
-            'coordinates': coordinates
-        },
-        'properties': {
-            'station': station,
-            'pollutants': pollutants
-        }
-    })
+    return jsonify(_build_geoJSON(coordinates, properties, base_uri))
 
 
-def _build_properties():
-    pass
+def _build_properties_JSON(properties_dict, base_uri):
+    query_uri = base_uri + '?'
+    out = {}
+
+    for k, v in properties_dict.items():
+        if v:
+            out[k] = v
+            query_uri += '&{}={}'.format(k, v)
+
+    out['uri'] = query_uri.replace('&', '', 1)
+
+    return out
 
 
-def _build_geoJSON(point_coordinates, type='feature'):
-    if type.lower() == 'feature':
-        return _build_geoJSON_feature(point_coordinates)
-    return {}
+def _build_geoJSON(coordinates, properties_dict, base_uri):
+    return _build_point_geoJSON(coordinates, properties_dict, base_uri)
 
 
-def _build_geoJSON_feature(point_coordinates):
-    pass
+def _build_point_geoJSON(coordinates, properties_dict, base_uri):
+    return {'type': 'Feature',
+            'geometry': {
+                'type': 'Point',
+                'coordinates': coordinates
+            },
+            'properties': _build_properties_JSON(properties_dict, base_uri)
+            }
 
 
 if __name__ == '__main__':
