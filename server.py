@@ -61,7 +61,7 @@ def get_pollutants():
     properties = {'station': station,
                   'pollutants': pollutants}
 
-    return jsonify(_build_JSON_response(coordinates, properties, base_uri))
+    return _build_JSON_response(coordinates, properties, base_uri)
 
 
 def _build_JSON_response(coordinates, properties_dict, base_uri, **kwargs):
