@@ -11,30 +11,31 @@ def not_found(error=None):
         'status': 404,
         'message': 'Not Found: ' + request.url,
     }
-    resp = jsonify(message)
-    resp.status_code = 404
+    response = jsonify(message)
+    response.status_code = 404
 
-    return resp
+    return response
 
 
 @app.route('/forecast')
 def forecast():
-    station = request.args.get('station')
-    pollutant = request.args.get('pollutant')
-    forecast_steps = request.args.get('forecast_steps')
-    type = request.args.get('type')
-
     try:
+        station = request.args['station']
+        pollutant = request.args['pollutant']
+        forecast_steps = request.args.get('forecast_steps') or 24
+        type = request.args.get('type') or 'forest'
         coordinates = get_station_coordinates(station)
+    except KeyError:
+        return not_found(KeyError)
     except IndexError:
-        return not_found()
+        return not_found(IndexError)
     base_uri = request.base_url
     properties = {'station': station,
                   'pollutant': pollutant,
                   'type': type,
                   'forecast_steps': forecast_steps}
 
-    return jsonify(_build_JSON_response(coordinates, properties, base_uri))
+    return _build_JSON_response(coordinates, properties, base_uri)
 
 
 @app.route('/pollutants')
@@ -48,29 +49,32 @@ def get_pollutants():
 
     return jsonify(_build_JSON_response(coordinates, properties, base_uri))
 
+
 def _build_JSON_response(coordinates, properties_dict, base_uri, **kwargs):
-    response = _build_geoJSON(coordinates, properties_dict, base_uri, **kwargs)
+    response = _build_geoJSON_dict(coordinates, properties_dict, base_uri, **kwargs)
     response['status'] = 200
+    response = jsonify(response)
+    response.status_code = 200
     return response
 
 
-def _build_geoJSON(coordinates, properties_dict, base_uri, **kwargs):
+def _build_geoJSON_dict(coordinates, properties_dict, base_uri, **kwargs):
     type = kwargs.get('type')
     if type == 'point' or not type:
-        return _build_point_geoJSON(coordinates, properties_dict, base_uri)
+        return _build_point_geoJSON_dict(coordinates, properties_dict, base_uri)
 
 
-def _build_point_geoJSON(coordinates, properties_dict, base_uri):
+def _build_point_geoJSON_dict(coordinates, properties_dict, base_uri):
     return {'type': 'Feature',
             'geometry': {
                 'type': 'Point',
                 'coordinates': coordinates
             },
-            'properties': _build_properties_JSON(properties_dict, base_uri)
+            'properties': _build_properties_JSON_dict(properties_dict, base_uri)
             }
 
 
-def _build_properties_JSON(properties_dict, base_uri):
+def _build_properties_JSON_dict(properties_dict, base_uri):
     query_uri = base_uri + '?'
     out = {}
 
