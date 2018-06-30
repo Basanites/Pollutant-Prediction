@@ -25,9 +25,11 @@ def predict():
             'pollutant': pollutant,
             'forecast_steps': forecast_steps,
             'type': type,
-            'uri': '/predict?{}&{}&{}'.format(station, forecast_steps, type)
+            'uri': '{0}?station={1}&pollutant={2}&forecast_steps={3}&type={4}'.format(request.base_url, station,
+                                                                                      pollutant, forecast_steps, type)
         }
     })
+
 
 @app.route('/pollutants')
 def get_pollutants():
