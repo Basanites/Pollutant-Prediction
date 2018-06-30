@@ -11,8 +11,22 @@ def not_found(error=None):
         'status': 404,
         'message': 'Not Found: ' + request.url,
     }
+
     response = jsonify(message)
     response.status_code = 404
+
+    return response
+
+
+@app.errorhandler(400)
+def bad_request(error=None):
+    message = {
+        'status': 400,
+        'message': 'Bad request: {}'.format(request.url),
+    }
+
+    response = jsonify(message)
+    response.status_code = 400
 
     return response
 
@@ -26,9 +40,9 @@ def forecast():
         type = request.args.get('type') or 'forest'
         coordinates = get_station_coordinates(station)
     except KeyError:
-        return not_found(KeyError)
+        return bad_request()
     except IndexError:
-        return not_found(IndexError)
+        return not_found()
     base_uri = request.base_url
     properties = {'station': station,
                   'pollutant': pollutant,
