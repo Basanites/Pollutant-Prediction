@@ -4,6 +4,7 @@ from sklearn import neighbors, ensemble, tree
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from fbprophet import Prophet
+import calendar
 
 
 class Predictor(ABC):
@@ -90,3 +91,36 @@ class ProphetPredictor(Predictor):
 class LSTMPredictor(Predictor):
     def predict(self):
         pass
+
+
+def create_artificial_features(series, frequency='H', steps=7):
+    lagged = create_lagged_features(series, frequency, steps)
+
+    statistics = lagged
+    statistics['sum'] = lagged.sum(axis=1)
+    statistics['mean'] = lagged.mean(axis=1)
+    statistics['median'] = lagged.median(axis=1)
+
+    weekdays = pd.get_dummies(lagged.index.weekday_name)
+    weekdays = weekdays.applymap(lambda x: bool(x))
+    weekdays.index = lagged.index
+
+    months = pd.get_dummies(lagged.index.month.map(lambda x: calendar.month_abbr[x]))
+    months = months.applymap(lambda x: bool(x))
+    months.index = lagged.index
+
+    out = statistics.join(weekdays).join(months)
+
+    return out
+
+
+def create_lagged_features(series, frequency='H', steps=7):
+    lagged = pd.DataFrame()
+
+    for i in range(1, steps + 1):
+        lagged['lag {}{}'.format(i, frequency)] = series.shift(i, freq=frequency)
+
+    lagged.index = series.index
+    lagged = lagged[steps + 1:]
+
+    return lagged.interpolate()

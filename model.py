@@ -1,5 +1,7 @@
 import pandas as pd
 from util.communication import *
+from timeseries import predictions
+import math
 
 
 class Model:
@@ -7,6 +9,45 @@ class Model:
         self.events = list(['import', 'cleanup', 'filtering', 'finished'])
         self.observable = Observable(self.events)
         self.df = None
+
+    def forecast_series(self, station, pollutant, forecast_type='random_forest', steps=24, test=True):
+        forecast_type = forecast_type.lower()
+        lags = 7
+        series = self.df[self.df.AirQualityStationEoICode == station][pollutant]
+        series = series[~series.index.duplicated(lags)]
+
+        if test:
+            y = series[lags+1:]
+            x = predictions.create_artificial_features(series, steps=lags)
+            x = x[lags+1:]
+            division = math.floor(len(x) / (4 / 3))
+
+            train_x = x[:division]
+            test_x = x[division:]
+
+            train_y = y[:division]
+            test_y = y[division:]
+        else:
+            train_y = series
+            train_x = predictions.create_artificial_features(train_y, steps=lags)
+            train_y = train_y[lags+1:]
+            test_y = pd.Series()
+            test_x = pd.DataFrame()
+
+        if forecast_type == 'random_forest':
+            predictor = predictions.RandomForestPredictor(train_x, train_y, test_x, test_y, 10)
+        elif forecast_type == 'decision_tree':
+            predictor = predictions.DecisionTreePredictor(train_x, train_y, test_x, test_y, 5)
+        elif forecast_type == 'knn':
+            predictor = predictions.KNearestNeighborsPredictor(train_x, train_y, test_x, test_y, 5, 'distance')
+        elif forecast_type == 'ets':
+            predictor = predictions.ETSPredictor(train_x, train_y, test_x, test_y, 'additive', 'additive', 24)
+        elif forecast_type == 'arima':
+            predictor = predictions.ARIMAPredictor(train_x, train_y, test_x, test_y, (2, 1, 2))
+        else:
+            predictor = predictions.Predictor(train_x, train_y, test_x, test_y, )
+
+        return predictor.predict().tolist()
 
     def import_csv(self, location):
         self.df = self.import_eea_weatherdata_csv(location)

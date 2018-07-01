@@ -4,6 +4,8 @@ from util.openaq import get_station_coordinates
 
 app = Flask(__name__)
 
+parameters = ['station', 'pollutant', 'forecast_steps', 'type']
+
 
 @app.errorhandler(404)
 def not_found(error=None):
@@ -43,11 +45,14 @@ def forecast():
         return bad_request()
     except IndexError:
         return not_found()
+
+    forecast = model.forecast_series(station, pollutant)
     base_uri = request.base_url
     properties = {'station': station,
                   'pollutant': pollutant,
                   'type': type,
-                  'forecast_steps': forecast_steps}
+                  'forecast_steps': forecast_steps,
+                  'forecast': forecast}
 
     return _build_JSON_response(coordinates, properties, base_uri)
 
@@ -93,9 +98,10 @@ def _build_properties_JSON_dict(properties_dict, base_uri):
     out = {}
 
     for k, v in properties_dict.items():
-        if v:
+        if v is not None:
             out[k] = v
-            query_uri += '&{}={}'.format(k, v)
+            if v in parameters:
+                query_uri += '&{}={}'.format(k, v)
 
     out['uri'] = query_uri.replace('&', '', 1)
 
