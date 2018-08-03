@@ -50,7 +50,7 @@ class KNearestNeighborsPredictor(Predictor):
     """
 
     def __init__(self, traindata_x, traindata_y, testdata_x, n_neighbors, weights, testdata_y=None, type=None,
-                 n_steps=1):
+                 steps=1):
         """
         Initializes the KNN Predictor
 
@@ -61,16 +61,16 @@ class KNearestNeighborsPredictor(Predictor):
         :param weights:     one of TODO
         :param testdata_y:  testing y vector (only used when testing model accuracy)
         :param type:        one of 'multimodel' and 'recursive' for multistep forecast
-        :param n_steps:     only used when type is set. Number of steps for multistep forecast
+        :param steps:     only used when type is set. Number of steps for multistep forecast
         """
         super(KNearestNeighborsPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
         self.type = type.lower()
-        self.steps = n_steps
+        self.steps = steps
 
         if self.type == 'multimodel':
             self.models = list()
             train_y = self.train['y']
-            for i in range(0, n_steps):
+            for i in range(0, steps):
                 self.models[i] = neighbors.KNeighborsRegressor(n_neighbors, weights=weights) \
                     .fit(self.train['x'][:-i], train_y[:i - 1])
                 train_y[:] = train_y[1:] + [train_y[0]]
