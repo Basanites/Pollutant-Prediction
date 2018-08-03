@@ -6,14 +6,29 @@ from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from fbprophet import Prophet
 import calendar
 import math
+import time
 
+def _calc_mae(expected, actual):
+    mae = 0
+    for i in range(0, expected):
+        mae += math.fabs(expected - actual)
+    return mae / expected.length
+
+def _calc_mse(expected, actual):
+    mse = 0
+    for i in range(0, expected):
+        mse += (expected - actual) ** 2
+    return mse / expected.length
 
 class Predictor(ABC):
     def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y):
+        start = time.time()
         self.train = {'x': traindata_x, 'y': traindata_y}
         self.test = {'x': testdata_x, 'y': testdata_y}
         self.model = None
         self.y_ = None
+        self.time = {}
+        self.time['init'] = time.time() - start
 
     @abstractmethod
     def predict(self):
@@ -25,21 +40,28 @@ class Predictor(ABC):
         stats['mse'] = self.get_mse()
         stats['rmse'] = self.get_rmse()
         stats['mae'] = self.get_mae()
+        # needs to be subclass based because fits are handled differently
+        #stats['residual mse'] = self.get_residual_mse()
+        #stats['residual rmse'] = self.get_residual_rmse()
+        #stats['residual mae'] = self.get_residual_mae()
+        stats['initialization time'] = self.get_initialization_time()
+        stats['prediction time'] = self.get_prediction_time()
+        stats['complete time'] = self.get_prediction_time() + self.get_initialization_time()
 
     def get_mse(self):
-        mse = 0
-        for i in range(0, self.y_.length):
-            mse += (self.test['y'].iloc[i] - self.y_[i]) ** 2
-        return mse / self.y_.length
+        return _calc_mse(self.test['y'][:self.y_.length], self.y_)
 
     def get_rmse(self):
         return self.get_mse() ** 0.5
 
     def get_mae(self):
-        mae = 0
-        for i in range(0, self.y_.length):
-            mae += math.fabs(self.test['y'].iloc[i] - self.y_[i])
-        return mae / self.y_.length
+        return _calc_mae(self.test['y'][:self.y_.length], self.y_)
+
+    def get_initialization_time(self):
+        return self.time['init']
+
+    def get_prediction_time(self):
+        return self.time['predict']
 
 
 class LinearRegressionPredictor(Predictor):
@@ -64,7 +86,10 @@ class DecisionTreePredictor(Predictor):
         :param mode:        one of 'multimodel' and 'recursive' for multistep forecast
         :param steps:       only used when mode is set. Number of steps for multistep forecast
         """
+        start = time.time()
+
         super(DecisionTreePredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+
         self.type = mode.lower()
         self.steps = steps
 
@@ -79,16 +104,22 @@ class DecisionTreePredictor(Predictor):
         else:
             self.model = tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'], self.train['y'])
 
+        self.time['init'] = time.time() - start
+
     def predict(self):
         """
         :return: the predicted values according to set inputs as list
         """
+        start = time.time()
+
         if self.type is not None and self.steps > 1:
             if self.type == 'recursive':
                 return self._recursive_predict()
             if self.type == 'multimodel':
                 return self._multimodel_predict()
         self.y_ = self.model.predict(self.test['x'])
+
+        self.time['predict'] = time.time() - start
         return self.y_
 
     def _recursive_predict(self):
@@ -138,7 +169,10 @@ class RandomForestPredictor(Predictor):
         :param mode:            one of 'multimodel' and 'recursive' for multistep forecast
         :param steps:           only used when mode is set. Number of steps for multistep forecast
         """
+        start = time.time()
+
         super(RandomForestPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+
         self.type = mode.lower()
         self.steps = steps
 
@@ -154,16 +188,22 @@ class RandomForestPredictor(Predictor):
         else:
             self.model = ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'], self.train['y'])
 
+        self.time['init'] = time.time() - start
+
     def predict(self):
         """
         :return: the predicted values according to set inputs as list
         """
+        start = time.time()
+
         if self.type is not None and self.steps > 1:
             if self.type == 'recursive':
                 return self._recursive_predict()
             if self.type == 'multimodel':
                 return self._multimodel_predict()
         self.y_ = self.model.predict(self.test['x'])
+
+        self.time['predict'] = time.time() - start
         return self.y_
 
     def _recursive_predict(self):
@@ -215,7 +255,10 @@ class KNearestNeighborsPredictor(Predictor):
         :param mode:        one of 'multimodel' and 'recursive' for multistep forecast
         :param steps:       only used when mode is set. Number of steps for multistep forecast
         """
+        start = time.time()
+
         super(KNearestNeighborsPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+
         self.type = mode.lower()
         self.steps = steps
 
@@ -231,17 +274,22 @@ class KNearestNeighborsPredictor(Predictor):
         else:
             self.model = neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'],
                                                                                          self.train['y'])
+        self.time['init'] = time.time() - start
 
     def predict(self):
         """
         :return: the predicted values according to set inputs as list
         """
+        start = time.time()
+
         if self.type is not None and self.steps > 1:
             if self.type == 'recursive':
                 return self._recursive_predict()
             if self.type == 'multimodel':
                 return self._multimodel_predict()
         self.y_ = self.model.predict(self.test['x'])
+
+        self.time['predict'] = time.time() - start
         return self.y_
 
     def _recursive_predict(self):
@@ -292,11 +340,15 @@ class ETSPredictor(Predictor):
         :param seasonlength:    the length to use for the season according to the given data
         :param testdata_y:      testing y vector (only used when testing model accuracy)
         """
+        start = time.time()
+
         super(ETSPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
         self.model = ExponentialSmoothing(self.train['y'],
                                           trend=trendtype,
                                           seasonal=seasontype,
                                           seasonal_periods=seasonlength).fit(optimized=True)
+
+        self.time['init'] = time.time() - start
 
     def predict(self, steps: int):
         """
@@ -305,7 +357,11 @@ class ETSPredictor(Predictor):
         :param steps:   how many steps to predict
         :return:        the values of the forecast steps using the same period as the training data
         """
+        start = time.time()
+
         self.y_ = self.model.forecast(steps)
+
+        self.time['predict'] = time.time() - start
         return self.y_
 
 
@@ -324,8 +380,12 @@ class ARIMAPredictor(Predictor):
         :param order:       TODO triple? of the pdq values for ARIMA
         :param testdata_y:  testing y vector (only used when testing model accuracy)
         """
+        start = time.time()
+
         super(ARIMAPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
         self.model = ARIMA(traindata_x, order=order)
+
+        self.time['init'] = time.time() - start
 
     def predict(self):
         """
@@ -333,7 +393,11 @@ class ARIMAPredictor(Predictor):
 
         :return: the values of the forecast steps
         """
+        start = time.time()
+
         self.model = self.model.fit(disp=0)
+
+        self.time['predict'] = time.time() - start
         pass
 
 
@@ -350,8 +414,11 @@ class ProphetPredictor(Predictor):
         :param testdata_x:  testing x vector (the values to predict from)
         :param testdata_y:  testing y vector (only used when testing model accuracy)
         """
+        start = time.time()
         super(ProphetPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
         self.model = Prophet().fit(pd.DataFrame(data={'ds': self.train['x'], 'y': self.train['y']}))
+
+        self.time['init'] = time.time() - start
 
     def predict(self, steps: int):
         """
@@ -360,8 +427,12 @@ class ProphetPredictor(Predictor):
         :param steps:   the amount of steps to predict further
         :return:        the predicted values
         """
+        start = time.time()
+
         future = self.model.make_future_dataframe(periods=steps, freq=self.train['x'].infer_freq(warn=False))
         self.y_ = self.model.predict(future)['yhat']
+
+        self.time['predict'] = time.time() - start
         return self.y_
 
 
