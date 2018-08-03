@@ -5,6 +5,7 @@ from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from fbprophet import Prophet
 import calendar
+import math
 
 
 class Predictor(ABC):
@@ -17,6 +18,28 @@ class Predictor(ABC):
     @abstractmethod
     def predict(self):
         pass
+
+    def get_prediction_stats(self):
+        stats = {}
+        self.predict()
+        stats['mse'] = self.get_mse()
+        stats['rmse'] = self.get_rmse()
+        stats['mae'] = self.get_mae()
+
+    def get_mse(self):
+        mse = 0
+        for i in range(0, self.y_.length):
+            mse += (self.test['y'].iloc[i] - self.y_[i]) ** 2
+        return mse / self.y_.length
+
+    def get_rmse(self):
+        return self.get_mse() ** 0.5
+
+    def get_mae(self):
+        mae = 0
+        for i in range(0, self.y_.length):
+            mae += math.fabs(self.test['y'].iloc[i] - self.y_[i])
+        return mae / self.y_.length
 
 
 class LinearRegressionPredictor(Predictor):
