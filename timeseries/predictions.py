@@ -48,9 +48,11 @@ class DecisionTreePredictor(Predictor):
         if self.type == 'multimodel':
             self.models = list()
             train_y = self.train['y']
-            for i in range(0, steps):
-                self.models[i] = tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'][:-i], train_y[:i - 1])
+            self.models.append(tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'], train_y))
+            for i in range(1, steps + 1):
+                # y values are rotated right for further predictions
                 train_y[:] = train_y[1:] + [train_y[0]]
+                self.models.append(tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'][:-i], train_y[:-i]))
         else:
             self.model = tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'], self.train['y'])
 
@@ -120,10 +122,12 @@ class RandomForestPredictor(Predictor):
         if self.type == 'multimodel':
             self.models = list()
             train_y = self.train['y']
-            for i in range(0, steps):
-                self.models[i] = ensemble.RandomForestRegressor(n_estimators=n_estimators) \
-                    .fit(self.train['x'][:-i], train_y[:i - 1])
+            self.models.append(ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'], train_y))
+            for i in range(1, steps + 1):
+                # y values are rotated right for further predictions
                 train_y[:] = train_y[1:] + [train_y[0]]
+                self.models.append(ensemble.RandomForestRegressor(n_estimators=n_estimators) \
+                                   .fit(self.train['x'][:-i], train_y[:-i]))
         else:
             self.model = ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'], self.train['y'])
 
@@ -195,10 +199,12 @@ class KNearestNeighborsPredictor(Predictor):
         if self.type == 'multimodel':
             self.models = list()
             train_y = self.train['y']
-            for i in range(0, steps):
-                self.models[i] = neighbors.KNeighborsRegressor(n_neighbors, weights=weights) \
-                    .fit(self.train['x'][:-i], train_y[:i - 1])
+            self.models.append(
+                neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'], train_y))
+            for i in range(1, steps + 1):
                 train_y[:] = train_y[1:] + [train_y[0]]
+                self.models.append(neighbors.KNeighborsRegressor(n_neighbors, weights=weights) \
+                                   .fit(self.train['x'][:-i], train_y[:-i]))
         else:
             self.model = neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'],
                                                                                          self.train['y'])
