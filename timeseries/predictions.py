@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import pandas as pd
-from sklearn import neighbors, ensemble, tree
+from sklearn import neighbors, ensemble, tree, linear_model
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from fbprophet import Prophet
@@ -8,17 +8,20 @@ import calendar
 import math
 import time
 
+
 def _calc_mae(expected, actual):
     mae = 0
     for i in range(0, expected):
         mae += math.fabs(expected - actual)
     return mae / expected.length
 
+
 def _calc_mse(expected, actual):
     mse = 0
     for i in range(0, expected):
         mse += (expected - actual) ** 2
     return mse / expected.length
+
 
 class Predictor(ABC):
     def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y):
@@ -27,7 +30,7 @@ class Predictor(ABC):
         self.test = {'x': testdata_x, 'y': testdata_y}
         self.model = None
         self.y_ = None
-        self.time = {}
+        self.time = dict()
         self.time['init'] = time.time() - start
 
     @abstractmethod
@@ -41,9 +44,9 @@ class Predictor(ABC):
         stats['rmse'] = self.get_rmse()
         stats['mae'] = self.get_mae()
         # needs to be subclass based because fits are handled differently
-        #stats['residual mse'] = self.get_residual_mse()
-        #stats['residual rmse'] = self.get_residual_rmse()
-        #stats['residual mae'] = self.get_residual_mae()
+        # stats['residual mse'] = self.get_residual_mse()
+        # stats['residual rmse'] = self.get_residual_rmse()
+        # stats['residual mae'] = self.get_residual_mae()
         stats['initialization time'] = self.get_initialization_time()
         stats['prediction time'] = self.get_prediction_time()
         stats['complete time'] = self.get_prediction_time() + self.get_initialization_time()
@@ -65,8 +68,85 @@ class Predictor(ABC):
 
 
 class LinearRegressionPredictor(Predictor):
+    """
+    Provides functionality to train and predict using a Linear Regression Model
+    """
+
+    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y=None, mode=None, steps=1):
+        """
+        Initializes the Linear Regression Predictor object
+
+        :param traindata_x: training x vector
+        :param traindata_y: training y vector
+        :param testdata_x:  testing x vector (the values to predict from)
+        :param testdata_y:  testing y vector (only used when testing model accuracy)
+        :param mode:        one of 'multimodel' and 'recursive' for multistep forecast
+        :param steps:       only used when mode is set. Number of steps for multistep forecast
+        """
+        start = time.time()
+
+        super(LinearRegressionPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+
+        self.type = mode.lower()
+        self.steps = steps
+
+        if self.type == 'multimodel':
+            self.models = list()
+            train_y = self.train['y']
+            self.models.append(linear_model.LinearRegression().fit(self.train['x'], train_y))
+            for i in range(1, steps + 1):
+                # y values are rotated right for further predictions
+                train_y[:] = train_y[1:] + [train_y[0]]
+                self.models.append(linear_model.LinearRegression().fit(self.train['x'][:-i], train_y[:-i]))
+        else:
+            self.model = linear_model.LinearRegression().fit(self.train['x'], self.train['y'])
+
+        self.time['init'] = time.time() - start
+
     def predict(self):
-        pass
+        """
+        :return: the predicted values according to set inputs as list
+        """
+        start = time.time()
+
+        if self.type is not None and self.steps > 1:
+            if self.type == 'recursive':
+                return self._recursive_predict()
+            if self.type == 'multimodel':
+                return self._multimodel_predict()
+        self.y_ = self.model.predict(self.test['x'])
+
+        self.time['predict'] = time.time() - start
+        return self.y_
+
+    def _recursive_predict(self):
+        """
+        Recursively predicts the predictors set number of steps further than test input is given.
+        For all given input values no recursion is used.
+
+        :return: the recursive prediction values
+        """
+        inputs = list()
+        inputs[0] = self.test['x'][-1]
+        self.y_ = self.model.predict(self.test['x'][:-1])
+        for i in range(0, self.steps):
+            prediction = self.model.predict(inputs[i])
+            inputs.append(prediction)
+            self.y_.append(prediction)
+        return self.y_
+
+    def _multimodel_predict(self):
+        """
+        Predicts the predictors set number of steps further than test input is given.
+        Uses a different model for each further step ahead.
+        Only the additional steps are predicted using shifted models.
+
+        :return: the multimodel prediction values
+        """
+        self.y_ = self.models[0].predict(self.test['x'][:-1])
+        for i, model in self.models:
+            self.y_ = model.predict(self.test['x'][-1])
+        return self.y_
 
 
 class DecisionTreePredictor(Predictor):
@@ -183,8 +263,8 @@ class RandomForestPredictor(Predictor):
             for i in range(1, steps + 1):
                 # y values are rotated right for further predictions
                 train_y[:] = train_y[1:] + [train_y[0]]
-                self.models.append(ensemble.RandomForestRegressor(n_estimators=n_estimators) \
-                                   .fit(self.train['x'][:-i], train_y[:-i]))
+                self.models.append(
+                    ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'][:-i], train_y[:-i]))
         else:
             self.model = ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'], self.train['y'])
 
@@ -269,8 +349,8 @@ class KNearestNeighborsPredictor(Predictor):
                 neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'], train_y))
             for i in range(1, steps + 1):
                 train_y[:] = train_y[1:] + [train_y[0]]
-                self.models.append(neighbors.KNeighborsRegressor(n_neighbors, weights=weights) \
-                                   .fit(self.train['x'][:-i], train_y[:-i]))
+                self.models.append(
+                    neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'][:-i], train_y[:-i]))
         else:
             self.model = neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'],
                                                                                          self.train['y'])
