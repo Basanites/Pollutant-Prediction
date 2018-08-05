@@ -12,12 +12,11 @@ if not os.path.exists(finaldir):
     os.makedirs(finaldir)
     post = list()
 else:
-    post = glob.glob(datadir + '/*')
+    post = glob.glob(finaldir + '/*')
 
 model = model.Model()
 
 for csv in pre:
-    print(f'reading{csv}')
     model.import_csv(csv)
     df = model.df
     try:
@@ -29,10 +28,11 @@ for csv in pre:
 
         if filelocation in post:
             df2 = pd.read_pickle(filelocation)
-            df = df2.concatenate(df)
+            df = pd.concat([df, df2])
             df = df[~df.index.duplicated(keep='first')]
             df.sort_index()
-
+        else:
+            post.append(filelocation)
         df.to_pickle(filelocation)
     except IndexError:
         pass
