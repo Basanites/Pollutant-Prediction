@@ -253,7 +253,7 @@ class RandomForestPredictor(Predictor):
 
         super(RandomForestPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
 
-        self.type = mode.lower()
+        self.type = mode.lower() if mode else 'single'
         self.steps = steps
 
         if self.type == 'multimodel':
