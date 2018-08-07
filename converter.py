@@ -23,7 +23,7 @@ for csv in pre:
         columns = list(df)
         station = df.iloc[0].AirQualityStationEoICode
 
-        filename = f'{station}-{columns[-1]}.pkl'.replace(' ', '_')
+        filename = f'{station}-{columns[-1]}.pkl'
         filelocation = f'{finaldir}/{filename}'
 
         if filelocation in post:
