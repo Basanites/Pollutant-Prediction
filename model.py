@@ -5,10 +5,11 @@ import math
 
 
 class Model:
-    def __init__(self):
+    def __init__(self, df=None):
         self.events = list(['import', 'cleanup', 'filtering', 'finished'])
         self.observable = Observable(self.events)
-        self.df = None
+        self.df = df
+        self.predictors = list()
 
     def forecast_series(self, station, pollutant, forecast_type='random_forest', steps=24, test=True):
         forecast_type = forecast_type.lower()
@@ -47,6 +48,7 @@ class Model:
         else:
             predictor = predictions.Predictor(train_x, train_y, test_x, test_y, )
 
+        self.predictors.append(predictor)
         return predictor.predict().tolist()
 
     def import_csv(self, location):
