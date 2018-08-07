@@ -23,16 +23,18 @@ for csv in pre:
         columns = list(df)
         station = df.iloc[0].AirQualityStationEoICode
 
-        filename = f'{station}-{columns[-1]}.pkl'
+        filename = f'{station}-{columns[-1]}.csv'
         filelocation = f'{finaldir}/{filename}'
 
         if filelocation in post:
-            df2 = pd.read_pickle(filelocation)
+            df2 = pd.read_csv(filelocation, parse_dates=[0], infer_datetime_format=True)
+            df2.index = df2['Timestamp']
+            df2 = df2.drop(columns=['Timestamp'])
             df = pd.concat([df, df2])
             df = df[~df.index.duplicated(keep='first')]
             df.sort_index()
         else:
             post.append(filelocation)
-        df.to_pickle(filelocation)
+        df.to_csv(filelocation)
     except IndexError:
         pass
