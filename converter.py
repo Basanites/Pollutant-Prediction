@@ -27,9 +27,7 @@ for csv in pre:
         filelocation = f'{finaldir}/{filename}'
 
         if filelocation in post:
-            df2 = pd.read_csv(filelocation, parse_dates=[0], infer_datetime_format=True)
-            df2.index = df2['Timestamp']
-            df2 = df2.drop(columns=['Timestamp'])
+            df2 = pd.read_csv(filelocation, index_col=0, parse_dates=[0], infer_datetime_format=True)
             df = pd.concat([df, df2])
             df = df[~df.index.duplicated(keep='first')]
             df.sort_index()
