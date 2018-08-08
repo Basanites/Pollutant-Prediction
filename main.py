@@ -32,11 +32,16 @@ def multiforecast(model, station, pollutant):
         namestring = f'{station}-{pollutant}-{forecast_type}'
         filelocation = f'{modeldir}/{namestring}.pkl'
 
-        print(f'running forecast for {station} on {pollutant} using {forecast_type}')
+        if not filelocation in models:
+            print(f'running forecast for {station} on {pollutant} using {forecast_type}')
 
-        values[forecast_type] = model.forecast_series(station, pollutant)
+            values[forecast_type] = model.forecast_series(station, pollutant)
 
-        pickle.dump(model, open(filelocation, 'wb'))
+            pickle.dump(model, open(filelocation, 'wb'))
+        else:
+            print(f'model {namestring} already created, using old stats')
+
+            model = pickle.load(open(filelocation, 'rb'))
 
         stats[forecast_type] = model.predictor.get_prediction_stats()
 
@@ -59,8 +64,7 @@ for csv in files:
         statsdf = pd.concat([statsdf, current_frame], ignore_index=True)
 
     statsdf['station'] = station
-    statsdf.index = statsdf['station']
-    statsdf = statsdf.drop(columns=['station'])
+    statsdf = statsdf.set_index('station')
 
     if not stats_exists:
         statsdf.to_csv(statsfile)
