@@ -1,8 +1,11 @@
-import model as m
 import glob
 import os
-import pandas as pd
 import pickle
+from converter import get_timeframe
+
+import pandas as pd
+
+import model as m
 
 datadir = './post'
 modeldir = './models'
@@ -17,6 +20,11 @@ if not os.path.exists(modeldir):
     models = list()
 else:
     models = glob.glob(modeldir + '/*')
+
+if not os.path.isfile(statsfile):
+    stats_exists = False
+else:
+    stats_exists = True
 
 
 def multiforecast(model, station, pollutant):
@@ -48,28 +56,13 @@ def multiforecast(model, station, pollutant):
     return (stats, values)
 
 
-def get_timeframe(index):
+if __name__ == '__main__':
     """
-    Calculates the time delta between the start and end of a pandas index
-    :param index:   the pandas index
-    :return:        a datetime timedelta object
-    """
-    delta = index[-1].to_pydatetime() - index[0].to_pydatetime()
-    return delta
-
-
-def main():
-    """
-    Main program
-
     Keeps only the series having a threshold high percentage of samples according to their specified rates.
     These are then interpolated and each possible forecast is being run.
     The prediction stats are saved in stats.csv
     """
-    if not os.path.isfile(statsfile):
-        stats_exists = False
-    else:
-        stats_exists = True
+
 
     for csv in files:
         info = csv.replace(f'{datadir}/', '').replace('.csv', '').split('-')
@@ -108,5 +101,3 @@ def main():
             print(
                 f'less than {keep_threshold * 100}% of values measured for specified rate, skipping {csv}\ndelta={delta} rate={rate}')
 
-
-main()
