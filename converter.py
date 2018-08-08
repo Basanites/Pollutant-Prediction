@@ -1,8 +1,10 @@
 import glob
 import os
-from model import Model
-import pandas as pd
 import sys
+
+import pandas as pd
+
+from model import Model
 
 datadir = './res'
 finaldir = './post'
@@ -14,6 +16,7 @@ if not os.path.exists(finaldir):
     post = list()
 else:
     post = glob.glob(finaldir + '/*')
+
 
 def get_timeframe(index):
     """
@@ -31,6 +34,7 @@ def convert():
     i = 0
     for csv in pre:
         i += 1
+
         model.import_csv(csv)
         df = model.df
         try:
@@ -50,26 +54,21 @@ def convert():
             else:
                 post.append(filelocation)
             df.to_csv(filelocation)
+        # Index error means the df is broken, skip these
         except IndexError:
             pass
 
 
 def remove_unneccessary():
     for csv in post:
-        info = csv.replace(f'{datadir}/', '').replace('.csv', '').split('-')
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True)
 
         rate = df.iloc[0]['AveragingTime']
         delta = get_timeframe(df.index)
 
-        check1 = (rate == 'day') and (len(df) >= keep_threshold * delta.days)
-        check2 = (rate == 'day') and (len(df) >= keep_threshold * delta.days)
-
-        if ((rate == 'day') and (len(df) >= keep_threshold * delta.days)) or (
-                (rate == 'hour') and (len(df) >= keep_threshold * delta.days * 24)):
-            pass
-        else:
-            print(f'removing {csv}, rate=={rate}, days=={delta.days}, hours=={delta.days * 24}, length={len(df)}, {check1}, {check2}')
+        if not (((rate == 'day') and (len(df) >= keep_threshold * delta.days)) or (
+                (rate == 'hour') and (len(df) >= keep_threshold * delta.days * 24))):
+            print(f'removing {csv}')
             os.remove(csv)
 
 
