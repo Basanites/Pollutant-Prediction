@@ -9,7 +9,7 @@ class Model:
         self.events = list(['import', 'cleanup', 'filtering', 'finished'])
         self.observable = Observable(self.events)
         self.df = df
-        self.predictors = list()
+        self.predictor = None
 
     def forecast_series(self, station, pollutant, forecast_type='random_forest', steps=24, test=True):
         forecast_type = forecast_type.lower()
@@ -58,7 +58,7 @@ class Model:
             predictor = predictions.Predictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
                                               testdata_y=test_y)
 
-        self.predictors.append(predictor)
+        self.predictor = predictor
         return predictor.predict().tolist()
 
     def import_csv(self, location):
