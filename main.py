@@ -1,5 +1,4 @@
 import model as m
-import timeseries.predictions
 import glob
 import os
 import pandas as pd
@@ -71,4 +70,4 @@ for csv in files:
         stats_exists = True
     else:
         with open(statsfile, 'a') as f:
-            statsdf.to_csv(statsfile, header=False)
+            statsdf.to_csv(f, header=False)
