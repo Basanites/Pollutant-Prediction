@@ -11,16 +11,16 @@ import time
 
 def _calc_mae(expected, actual):
     mae = 0
-    for i in range(0, expected):
-        mae += math.fabs(expected - actual)
-    return mae / expected.length
+    for i in range(0, len(expected)):
+        mae += math.fabs(expected.iloc[i] - actual[i])
+    return mae / len(expected)
 
 
 def _calc_mse(expected, actual):
     mse = 0
-    for i in range(0, expected):
-        mse += (expected - actual) ** 2
-    return mse / expected.length
+    for i in range(0, len(expected)):
+        mse += (expected.iloc[i] - actual[i]) ** 2
+    return mse / len(expected)
 
 
 class Predictor(ABC):
@@ -38,8 +38,10 @@ class Predictor(ABC):
         pass
 
     def get_prediction_stats(self):
-        stats = {}
-        self.predict()
+        stats = dict()
+        if not len(self.y_):
+            self.predict()
+
         stats['mse'] = self.get_mse()
         stats['rmse'] = self.get_rmse()
         stats['mae'] = self.get_mae()
@@ -47,18 +49,20 @@ class Predictor(ABC):
         # stats['residual mse'] = self.get_residual_mse()
         # stats['residual rmse'] = self.get_residual_rmse()
         # stats['residual mae'] = self.get_residual_mae()
-        stats['initialization time'] = self.get_initialization_time()
-        stats['prediction time'] = self.get_prediction_time()
-        stats['complete time'] = self.get_prediction_time() + self.get_initialization_time()
+        stats['initialization_time'] = self.get_initialization_time()
+        stats['prediction_time'] = self.get_prediction_time()
+        stats['complete_time'] = self.get_prediction_time() + self.get_initialization_time()
+
+        return stats
 
     def get_mse(self):
-        return _calc_mse(self.test['y'][:self.y_.length], self.y_)
+        return _calc_mse(self.test['y'][:len(self.y_)], self.y_)
 
     def get_rmse(self):
         return self.get_mse() ** 0.5
 
     def get_mae(self):
-        return _calc_mae(self.test['y'][:self.y_.length], self.y_)
+        return _calc_mae(self.test['y'][:len(self.y_)], self.y_)
 
     def get_initialization_time(self):
         return self.time['init']
