@@ -3,7 +3,6 @@ import glob
 import os
 import pandas as pd
 import pickle
-import datetime
 
 datadir = './post'
 modeldir = './models'
@@ -11,7 +10,6 @@ statsfile = './stats.csv'
 files = glob.glob(datadir + '/*')
 keep_threshold = 0.95
 pandasrates = {'day': 'D', 'hour': 'H'}
-
 forecast_types = ['random_forest', 'decision_tree', 'knn']
 
 if not os.path.exists(modeldir):
@@ -63,6 +61,10 @@ def get_timeframe(index):
 def main():
     """
     Main program
+
+    Keeps only the series having a threshold high percentage of samples according to their specified rates.
+    These are then interpolated and each possible forecast is being run.
+    The prediction stats are saved in stats.csv
     """
     if not os.path.isfile(statsfile):
         stats_exists = False
