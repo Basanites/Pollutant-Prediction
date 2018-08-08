@@ -30,7 +30,7 @@ for csv in pre:
             df2 = pd.read_csv(filelocation, index_col=0, parse_dates=[0], infer_datetime_format=True)
             df = pd.concat([df, df2])
             df = df[~df.index.duplicated(keep='first')]
-            df.sort_index()
+            df = df.sort_index()
         else:
             post.append(filelocation)
         df.to_csv(filelocation)
