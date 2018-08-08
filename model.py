@@ -18,9 +18,9 @@ class Model:
         series = series[~series.index.duplicated(lags)]
 
         if test:
-            y = series[lags+1:]
+            y = series[lags + 1:]
             x = predictions.create_artificial_features(series, steps=lags)
-            x = x[lags+1:]
+            x = x[lags + 1:]
             division = math.floor(len(x) / (4 / 3))
 
             train_x = x[:division]
@@ -31,22 +31,32 @@ class Model:
         else:
             train_y = series
             train_x = predictions.create_artificial_features(train_y, steps=lags)
-            train_y = train_y[lags+1:]
+            train_y = train_y[lags + 1:]
             test_y = pd.Series()
             test_x = pd.DataFrame()
 
         if forecast_type == 'random_forest':
-            predictor = predictions.RandomForestPredictor(train_x, train_y, test_x, test_y, 10)
+            predictor = predictions.RandomForestPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
+                                                          testdata_y=test_y,
+                                                          n_estimators=10)
         elif forecast_type == 'decision_tree':
-            predictor = predictions.DecisionTreePredictor(train_x, train_y, test_x, test_y, 5)
+            predictor = predictions.DecisionTreePredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
+                                                          testdata_y=test_y,
+                                                          depth=5)
         elif forecast_type == 'knn':
-            predictor = predictions.KNearestNeighborsPredictor(train_x, train_y, test_x, test_y, 5, 'distance')
+            predictor = predictions.KNearestNeighborsPredictor(traindata_x=train_x, traindata_y=train_y,
+                                                               testdata_x=test_x, testdata_y=test_y, n_neighbors=5,
+                                                               weights='distance')
         elif forecast_type == 'ets':
-            predictor = predictions.ETSPredictor(train_x, train_y, test_x, test_y, 'additive', 'additive', 24)
+            predictor = predictions.ETSPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
+                                                 testdata_y=test_y, trendtype='additive', seasontype='additive',
+                                                 seasonlength=24)
         elif forecast_type == 'arima':
-            predictor = predictions.ARIMAPredictor(train_x, train_y, test_x, test_y, (2, 1, 2))
+            predictor = predictions.ARIMAPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
+                                                   testdata_y=test_y, order=(2, 1, 2))
         else:
-            predictor = predictions.Predictor(train_x, train_y, test_x, test_y, )
+            predictor = predictions.Predictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
+                                              testdata_y=test_y)
 
         self.predictors.append(predictor)
         return predictor.predict().tolist()
