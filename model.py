@@ -113,8 +113,7 @@ class Model:
         return df.drop(columns=['Countrycode', 'Namespace', 'AirQualityNetwork',
                                 'AirQualityStation', 'SamplingPoint', 'Sample',
                                 'SamplingProcess', 'AirPollutantCode',
-                                'DatetimeBegin', 'Validity', 'Verification',
-                                'AveragingTime'])
+                                'DatetimeBegin', 'Validity', 'Verification'])
 
     def _tidy_up(self, df):
         self.observable.notify('cleanup', 'Cleaning up Dataframe')
@@ -125,8 +124,8 @@ class Model:
 
     def _descriptors_as_columns(self, df):
         return df.pivot_table(columns='AirPollutant',
-                              index=[df.index, 'AirQualityStationEoICode', 'UnitOfMeasurement'],
-                              values='Concentration').reset_index(level=[1, 2])
+                              index=[df.index, 'AirQualityStationEoICode', 'UnitOfMeasurement', 'AveragingTime'],
+                              values='Concentration').reset_index(level=[1, 2, 3])
 
     def _set_short_names(self, df):
         df.index.names = ['Timestamp']
