@@ -534,7 +534,8 @@ def create_artificial_features(series, frequency='H', steps=7):
     :param steps:       the amount of steps to lag the series by
     :return:            the dataframe containing the artificial features for the input series
     """
-    lagged = create_lagged_features(series, frequency, steps)
+    interpolated = series.interpolate(method='time', frequency=frequency)
+    lagged = create_lagged_features(interpolated, frequency, steps)
 
     statistics = lagged
     statistics['sum'] = lagged.sum(axis=1)
