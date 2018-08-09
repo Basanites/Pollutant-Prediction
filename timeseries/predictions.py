@@ -30,6 +30,7 @@ class Predictor():
         self.test = {'x': testdata_x, 'y': testdata_y}
         self.model = None
         self.y_ = list()
+        self.y_s = list()
         self.type = mode.lower(),
         self.steps = steps
         self.models = list()
@@ -41,9 +42,14 @@ class Predictor():
         if not len(self.y_):
             self.predict()
 
-        stats['mse'] = self.get_mse()
-        stats['rmse'] = self.get_rmse()
-        stats['mae'] = self.get_mae()
+        if self.type != 'single':
+            stats['mse'] = self.get_multistep_mse()
+            stats['rmse'] = self.get_multistep_rmse()
+            stats['mae'] = self.get_multistep_mae()
+        else:
+            stats['mse'] = self.get_mse()
+            stats['rmse'] = self.get_rmse()
+            stats['mae'] = self.get_mae()
         # needs to be subclass based because fits are handled differently
         # stats['residual mse'] = self.get_residual_mse()
         # stats['residual rmse'] = self.get_residual_rmse()
@@ -56,14 +62,17 @@ class Predictor():
 
     def predict(self):
         """
-        :return: the predicted values according to set inputs as list
+        :return:    the predicted values according to set inputs as list
+                    list of lists for multimodel and recursive
         """
         start = time.time()
 
         if self.type is not None and self.steps > 1:
             if self.type == 'recursive':
+                self.time['predict'] = time.time() - start
                 return self._recursive_predict()
             if self.type == 'multimodel':
+                self.time['predict'] = time.time() - start
                 return self._multimodel_predict()
         self.y_ = self.model.predict(self.test['x'])
 
@@ -75,38 +84,63 @@ class Predictor():
         Recursively predicts the predictors set number of steps further than test input is given.
         For all given input values no recursion is used.
 
-        :return: the recursive prediction values
+        :return: the list of recursive prediction values for timestep: list[model][step]
         """
-        inputs = list()
-        inputs[0] = self.test['x'][-1]
-        self.y_ = self.model.predict(self.test['x'][:-1])
-        for i in range(0, self.steps):
-            prediction = self.model.predict(inputs[i])
-            inputs.append(prediction)
-            self.y_.append(prediction)
-        return self.y_
+        # inputs = list()
+        # for i in range(0, len(self.test['x'])):
+        #     inputs[0] = self.test['x'].iloc[i]
+        #     for j in range(0, self.steps):
+        #         prediction = self.model.predict(inputs[j])
+        #         self.y_s[i].append(prediction)
+        #
+        #         current_x =
+        #
+        #         object[f'lag_{i}{freq}'] = object[f'lag_{i - 1}{freq}']
+        #         inputs.append(object)
+        # return self.y_s
+        pass
 
     def _multimodel_predict(self):
         """
         Predicts the predictors set number of steps further than test input is given.
         Uses a different model for each further step ahead.
-        Only the additional steps are predicted using shifted models.
 
-        :return: the multimodel prediction values
+        :return: the list of multimodel prediction values for timestep: list[model][step]
         """
-        self.y_ = self.models[0].predict(self.test['x'][:-1])
-        for model in self.models:
-            self.y_ = model.predict(self.test['x'][-1])
-        return self.y_
+
+        for i in range(0, len(self.models)):
+            self.y_s[i] = self.models[i].predict(self.test['x'])
+        return self.y_s
 
     def get_mse(self):
         return _calc_mse(self.test['y'][:len(self.y_)], self.y_)
 
+    def get_multistep_mse(self):
+        out = list()
+        for i in range(0, len(self.y_s)):
+            y_ = self.y_s[i]
+            out.append(_calc_mse(self.test['y'][i + 1:len(y_)], y_[:-(i+1)]))
+        return out
+
     def get_rmse(self):
         return self.get_mse() ** 0.5
 
+    def get_multistep_rmse(self):
+        out = list()
+        for i in range(0, len(self.y_s)):
+            y_ = self.y_s[i]
+            out.append(_calc_mse(self.test['y'][i + 1:len(y_)], y_[:-(i+1)]) ** 0.5)
+        return out
+
     def get_mae(self):
         return _calc_mae(self.test['y'][:len(self.y_)], self.y_)
+
+    def get_multistep_mae(self):
+        out = list()
+        for i in range(0, len(self.y_s)):
+            y_ = self.y_s[i]
+            out.append(_calc_mae(self.test['y'][i + 1:len(y_)], y_[:-(i+1)]))
+        return out
 
     def get_initialization_time(self):
         return self.time['init']
