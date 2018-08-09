@@ -57,6 +57,7 @@ class Predictor():
         stats['initialization_time'] = self.get_initialization_time()
         stats['prediction_time'] = self.get_prediction_time()
         stats['complete_time'] = self.get_prediction_time() + self.get_initialization_time()
+        stats['steps'] = self.steps
 
         return stats
 
@@ -148,8 +149,16 @@ class Predictor():
     def get_prediction_time(self):
         return self.time['predict']
 
+class SingleStepPredictor(Predictor):
+    def get_prediction_stats(self):
+        stats = super(SingleStepPredictor, self).get_prediction_stats()
+        stats['mode'] = self.type
+        if self.type == 'single':
+            stats['steps'] = 1
+        return stats
 
-class LinearRegressionPredictor(Predictor):
+
+class LinearRegressionPredictor(SingleStepPredictor):
     """
     Provides functionality to train and predict using a Linear Regression Model
     """
@@ -182,7 +191,7 @@ class LinearRegressionPredictor(Predictor):
         self.time['init'] = time.time() - start
 
 
-class DecisionTreePredictor(Predictor):
+class DecisionTreePredictor(SingleStepPredictor):
     """
     Provides functionality to predict outputs by learning the training data using a decision tree.
     """
@@ -205,6 +214,7 @@ class DecisionTreePredictor(Predictor):
 
         self.type = mode.lower()
         self.steps = steps
+        self.depth = depth
 
         if self.type == 'multimodel':
             train_y = self.train['y']
@@ -218,8 +228,13 @@ class DecisionTreePredictor(Predictor):
 
         self.time['init'] = time.time() - start
 
+    def get_prediction_stats(self):
+        stats = super(DecisionTreePredictor, self).get_prediction_stats()
+        stats['depth'] = self.depth
+        return stats
 
-class RandomForestPredictor(Predictor):
+
+class RandomForestPredictor(SingleStepPredictor):
     """
     Provides functionality to predict the output values by learning the training data by using a random forest.
     """
@@ -242,6 +257,7 @@ class RandomForestPredictor(Predictor):
 
         self.type = mode.lower() if mode else 'single'
         self.steps = steps
+        self.n_estimators = n_estimators
 
         if self.type == 'multimodel':
             train_y = self.train['y']
@@ -256,8 +272,13 @@ class RandomForestPredictor(Predictor):
 
         self.time['init'] = time.time() - start
 
+    def get_prediction_stats(self):
+        stats = super(RandomForestPredictor, self).get_prediction_stats()
+        stats['n_estimators'] = self.n_estimators
+        return stats
 
-class KNearestNeighborsPredictor(Predictor):
+
+class KNearestNeighborsPredictor(SingleStepPredictor):
     """
     Provides functionality to predict values from given inputs after having learned from training data by using KNN.
     """
@@ -282,6 +303,7 @@ class KNearestNeighborsPredictor(Predictor):
 
         self.type = mode.lower()
         self.steps = steps
+        self.n_neighbors = n_neighbors
 
         if self.type == 'multimodel':
             train_y = self.train['y']
@@ -295,6 +317,11 @@ class KNearestNeighborsPredictor(Predictor):
             self.model = neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'],
                                                                                          self.train['y'])
         self.time['init'] = time.time() - start
+
+    def get_prediction_stats(self):
+        stats = super(KNearestNeighborsPredictor, self).get_prediction_stats()
+        stats['n_neighbors'] = self.n_neighbors
+        return stats
 
 
 class ETSPredictor(Predictor):

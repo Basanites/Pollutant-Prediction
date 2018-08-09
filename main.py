@@ -1,11 +1,11 @@
 import glob
 import os
 import pickle
-from converter import get_timeframe
 
 import pandas as pd
 
 import model as m
+from converter import get_timeframe
 
 datadir = './post'
 modeldir = './models'
@@ -14,6 +14,10 @@ files = glob.glob(datadir + '/*')
 keep_threshold = 0.95
 pandasrates = {'day': 'D', 'hour': 'H'}
 forecast_types = ['random_forest', 'decision_tree', 'knn']
+modes = ['single', 'multimodel']
+estimatornums = [10, 20, 50]
+depthnums = [5, 10, 20]
+neighbornums = [5, 10, 20]
 
 if not os.path.exists(modeldir):
     os.makedirs(modeldir)
@@ -37,21 +41,46 @@ def multiforecast(model, station, pollutant):
     """
     stats = dict()
     values = dict()
+    calls = {'random_forest': list(), 'decision_tree': list(), 'knn': list()}
+    for estimators in estimatornums:
+        for mode in modes:
+            calls['random_forest'].append(
+                model.forecast_series(station=station, pollutant=pollutant, rforest_estimators=estimators, mode=mode,
+                                      steps=10))
+    for depth in depthnums:
+        for mode in modes:
+            calls['decision_tree'].append(
+                model.forecast_series(station=station, pollutant=pollutant, dtree_depth=depth, mode=mode, steps=10))
+    for neighbors in neighbornums:
+        for mode in modes:
+            calls['knn'].append(
+                model.forecast_series(station=station, pollutant=pollutant, knn_neighbors=neighbors, mode=mode,
+                                      steps=10))
 
-    for forecast_type in forecast_types:
-        namestring = f'{station}-{pollutant}-{forecast_type}'
-        filelocation = f'{modeldir}/{namestring}.pkl'
+    for forecast_type, calllist in calls:
+        stats[forecast_type] = list()
+        for i in range(0, len(calllist)):
+            namestring = f'{station}-{pollutant}-{forecast_type}'
+            if forecast_type == 'random_forest':
+                namestring = namestring.join(f'-estimators={estimatornums[i]}')
+            elif forecast_type == 'decision_tree':
+                namestring = namestring.join(f'-depth={depthnums[i]}')
+            elif forecast_type == 'knn':
+                namestring = namestring.join(f'-neighbors={neighbornums[i]}')
+            filelocation = f'{modeldir}/{namestring}.pkl'
 
-        if not filelocation in models:
-            print(f'running forecast for {station} on {pollutant} using {forecast_type}')
-            values[forecast_type] = model.forecast_series(station, pollutant)
+            info = namestring.split('-')
 
-            pickle.dump(model, open(filelocation, 'wb'))
-        else:
-            print(f'model {namestring} already created, using old stats')
-            model = pickle.load(open(filelocation, 'rb'))
+            if not filelocation in models:
+                print(f'running forecast for {info[0]} on {info[1]} using {info[2]} and {info[3]}')
+                values[forecast_type] = calllist[i]
 
-        stats[forecast_type] = model.predictor.get_prediction_stats()
+                pickle.dump(model, open(filelocation, 'wb'))
+            else:
+                print(f'model {namestring} already created, using old stats')
+                model = pickle.load(open(filelocation, 'rb'))
+
+            stats[forecast_type].append(model.predictor.get_prediction_stats())
 
     return (stats, values)
 
@@ -62,7 +91,6 @@ if __name__ == '__main__':
     These are then interpolated and each possible forecast is being run.
     The prediction stats are saved in stats.csv
     """
-
 
     for csv in files:
         info = csv.replace(f'{datadir}/', '').replace('.csv', '').split('-')
@@ -79,14 +107,15 @@ if __name__ == '__main__':
             df = df.resample(pandasrates[rate]).interpolate(method='time')
             model = m.Model(df)
 
-            comparison = multiforecast(model, station, pollutant)
+            comparison = multiforecast(model=model, station=station, pollutant=pollutant)
 
             statsdf = pd.DataFrame()
 
             for forecast_type in comparison[0].keys():
-                current_frame = pd.DataFrame.from_records([comparison[0][forecast_type]])
-                current_frame['forecast_type'] = forecast_type
-                statsdf = pd.concat([statsdf, current_frame], ignore_index=True)
+                for stats in comparison[0][forecast_type]:
+                    current_frame = pd.DataFrame.from_records(stats)
+                    current_frame['forecast_type'] = forecast_type
+                    statsdf = pd.concat([statsdf, current_frame], ignore_index=True)
 
             statsdf['station'] = station
             statsdf = statsdf.set_index('station')
@@ -100,4 +129,3 @@ if __name__ == '__main__':
         else:
             print(
                 f'less than {keep_threshold * 100}% of values measured for specified rate, skipping {csv}\ndelta={delta} rate={rate}')
-
