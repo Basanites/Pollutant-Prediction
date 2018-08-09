@@ -412,7 +412,7 @@ class ETSPredictor(Predictor):
     """
 
     def __init__(self, traindata_x, traindata_y, testdata_x, seasonlength: int, trendtype='additive',
-                 seasontype='additive', testdata_y=None):
+                 seasontype='additive', steps=1, testdata_y=None):
         """
         Initializes the ETS Predictor object
 
@@ -422,6 +422,7 @@ class ETSPredictor(Predictor):
         :param trendtype:       type of ETS trend component. One of 'multiplicative' and 'additive'. Default 'additive'
         :param seasontype:      type of ETS season component. One of 'multiplicative' and 'additive'. Default 'additive'
         :param seasonlength:    the length to use for the season according to the given data
+        :param steps:           amount of timesteps to forecast for
         :param testdata_y:      testing y vector (only used when testing model accuracy)
         """
         start = time.time()
@@ -431,10 +432,11 @@ class ETSPredictor(Predictor):
                                           trend=trendtype,
                                           seasonal=seasontype,
                                           seasonal_periods=seasonlength).fit(optimized=True)
+        self.steps = steps
 
         self.time['init'] = time.time() - start
 
-    def predict(self, steps: int):
+    def predict(self):
         """
         Predicts n future steps from the given training data
 
@@ -443,7 +445,7 @@ class ETSPredictor(Predictor):
         """
         start = time.time()
 
-        self.y_ = self.model.forecast(steps)
+        self.y_ = self.model.forecast(self.steps)
 
         self.time['predict'] = time.time() - start
         return self.y_

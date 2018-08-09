@@ -1,7 +1,9 @@
-import pandas as pd
-from util.communication import *
-from timeseries import predictions
 import math
+
+import pandas as pd
+
+from timeseries import predictions
+from util.communication import *
 
 
 class Model:
@@ -11,9 +13,11 @@ class Model:
         self.df = df
         self.predictor = None
 
-    def forecast_series(self, station, pollutant, forecast_type='random_forest', steps=24, test=True):
+    def forecast_series(self, station, pollutant, forecast_type='random_forest', rforest_estimators=10, dtree_depth=5,
+                        knn_neighbors=5, knn_weights='distance', ets_trend='additive', ets_season='additive',
+                        ets_seasonlength=24, arima_order=(2, 1, 2), steps=1, multistepmode='recursive', lags=24,
+                        test=True):
         forecast_type = forecast_type.lower()
-        lags = 7
         series = self.df[self.df.AirQualityStationEoICode == station][pollutant]
         series = series[~series.index.duplicated(lags)]
 
@@ -37,23 +41,24 @@ class Model:
 
         if forecast_type == 'random_forest':
             predictor = predictions.RandomForestPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
-                                                          testdata_y=test_y,
-                                                          n_estimators=10)
+                                                          testdata_y=test_y, n_estimators=rforest_estimators,
+                                                          mode=multistepmode, steps=steps)
         elif forecast_type == 'decision_tree':
             predictor = predictions.DecisionTreePredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
-                                                          testdata_y=test_y,
-                                                          depth=5)
+                                                          testdata_y=test_y, depth=dtree_depth, mode=multistepmode,
+                                                          steps=steps)
         elif forecast_type == 'knn':
             predictor = predictions.KNearestNeighborsPredictor(traindata_x=train_x, traindata_y=train_y,
-                                                               testdata_x=test_x, testdata_y=test_y, n_neighbors=5,
-                                                               weights='distance')
+                                                               testdata_x=test_x, testdata_y=test_y,
+                                                               n_neighbors=knn_neighbors, weights=knn_weights,
+                                                               mode=multistepmode, steps=steps)
         elif forecast_type == 'ets':
             predictor = predictions.ETSPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
-                                                 testdata_y=test_y, trendtype='additive', seasontype='additive',
-                                                 seasonlength=24)
+                                                 testdata_y=test_y, trendtype=ets_trend, seasontype=ets_season,
+                                                 seasonlength=ets_seasonlength, steps=steps)
         elif forecast_type == 'arima':
             predictor = predictions.ARIMAPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
-                                                   testdata_y=test_y, order=(2, 1, 2))
+                                                   testdata_y=test_y, order=arima_order)
         else:
             predictor = predictions.Predictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
                                               testdata_y=test_y)
