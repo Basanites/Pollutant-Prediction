@@ -1,12 +1,12 @@
-from abc import ABC, abstractmethod
-import pandas as pd
-from sklearn import neighbors, ensemble, tree, linear_model
-from statsmodels.tsa.arima_model import ARIMA
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from fbprophet import Prophet
 import calendar
 import math
 import time
+
+import pandas as pd
+from fbprophet import Prophet
+from sklearn import neighbors, ensemble, tree, linear_model
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 
 def _calc_mae(expected, actual):
@@ -23,19 +23,18 @@ def _calc_mse(expected, actual):
     return mse / len(expected)
 
 
-class Predictor(ABC):
-    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y):
+class Predictor():
+    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y, mode='single', steps=1):
         start = time.time()
         self.train = {'x': traindata_x, 'y': traindata_y}
         self.test = {'x': testdata_x, 'y': testdata_y}
         self.model = None
-        self.y_ = None
+        self.y_ = list()
+        self.type = mode.lower(),
+        self.steps = steps
+        self.models = list()
         self.time = dict()
         self.time['init'] = time.time() - start
-
-    @abstractmethod
-    def predict(self):
-        pass
 
     def get_prediction_stats(self):
         stats = dict()
@@ -54,6 +53,51 @@ class Predictor(ABC):
         stats['complete_time'] = self.get_prediction_time() + self.get_initialization_time()
 
         return stats
+
+    def predict(self):
+        """
+        :return: the predicted values according to set inputs as list
+        """
+        start = time.time()
+
+        if self.type is not None and self.steps > 1:
+            if self.type == 'recursive':
+                return self._recursive_predict()
+            if self.type == 'multimodel':
+                return self._multimodel_predict()
+        self.y_ = self.model.predict(self.test['x'])
+
+        self.time['predict'] = time.time() - start
+        return self.y_
+
+    def _recursive_predict(self):
+        """
+        Recursively predicts the predictors set number of steps further than test input is given.
+        For all given input values no recursion is used.
+
+        :return: the recursive prediction values
+        """
+        inputs = list()
+        inputs[0] = self.test['x'][-1]
+        self.y_ = self.model.predict(self.test['x'][:-1])
+        for i in range(0, self.steps):
+            prediction = self.model.predict(inputs[i])
+            inputs.append(prediction)
+            self.y_.append(prediction)
+        return self.y_
+
+    def _multimodel_predict(self):
+        """
+        Predicts the predictors set number of steps further than test input is given.
+        Uses a different model for each further step ahead.
+        Only the additional steps are predicted using shifted models.
+
+        :return: the multimodel prediction values
+        """
+        self.y_ = self.models[0].predict(self.test['x'][:-1])
+        for model in self.models:
+            self.y_ = model.predict(self.test['x'][-1])
+        return self.y_
 
     def get_mse(self):
         return _calc_mse(self.test['y'][:len(self.y_)], self.y_)
@@ -89,13 +133,9 @@ class LinearRegressionPredictor(Predictor):
         """
         start = time.time()
 
-        super(LinearRegressionPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
-
-        self.type = mode.lower()
-        self.steps = steps
+        super(LinearRegressionPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y, mode, steps)
 
         if self.type == 'multimodel':
-            self.models = list()
             train_y = self.train['y']
             self.models.append(linear_model.LinearRegression().fit(self.train['x'], train_y))
             for i in range(1, steps + 1):
@@ -106,51 +146,6 @@ class LinearRegressionPredictor(Predictor):
             self.model = linear_model.LinearRegression().fit(self.train['x'], self.train['y'])
 
         self.time['init'] = time.time() - start
-
-    def predict(self):
-        """
-        :return: the predicted values according to set inputs as list
-        """
-        start = time.time()
-
-        if self.type is not None and self.steps > 1:
-            if self.type == 'recursive':
-                return self._recursive_predict()
-            if self.type == 'multimodel':
-                return self._multimodel_predict()
-        self.y_ = self.model.predict(self.test['x'])
-
-        self.time['predict'] = time.time() - start
-        return self.y_
-
-    def _recursive_predict(self):
-        """
-        Recursively predicts the predictors set number of steps further than test input is given.
-        For all given input values no recursion is used.
-
-        :return: the recursive prediction values
-        """
-        inputs = list()
-        inputs[0] = self.test['x'][-1]
-        self.y_ = self.model.predict(self.test['x'][:-1])
-        for i in range(0, self.steps):
-            prediction = self.model.predict(inputs[i])
-            inputs.append(prediction)
-            self.y_.append(prediction)
-        return self.y_
-
-    def _multimodel_predict(self):
-        """
-        Predicts the predictors set number of steps further than test input is given.
-        Uses a different model for each further step ahead.
-        Only the additional steps are predicted using shifted models.
-
-        :return: the multimodel prediction values
-        """
-        self.y_ = self.models[0].predict(self.test['x'][:-1])
-        for i, model in self.models:
-            self.y_ = model.predict(self.test['x'][-1])
-        return self.y_
 
 
 class DecisionTreePredictor(Predictor):
@@ -178,7 +173,6 @@ class DecisionTreePredictor(Predictor):
         self.steps = steps
 
         if self.type == 'multimodel':
-            self.models = list()
             train_y = self.train['y']
             self.models.append(tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'], train_y))
             for i in range(1, steps + 1):
@@ -189,51 +183,6 @@ class DecisionTreePredictor(Predictor):
             self.model = tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'], self.train['y'])
 
         self.time['init'] = time.time() - start
-
-    def predict(self):
-        """
-        :return: the predicted values according to set inputs as list
-        """
-        start = time.time()
-
-        if self.type is not None and self.steps > 1:
-            if self.type == 'recursive':
-                return self._recursive_predict()
-            if self.type == 'multimodel':
-                return self._multimodel_predict()
-        self.y_ = self.model.predict(self.test['x'])
-
-        self.time['predict'] = time.time() - start
-        return self.y_
-
-    def _recursive_predict(self):
-        """
-        Recursively predicts the predictors set number of steps further than test input is given.
-        For all given input values no recursion is used.
-
-        :return: the recursive prediction values
-        """
-        inputs = list()
-        inputs[0] = self.test['x'][-1]
-        self.y_ = self.model.predict(self.test['x'][:-1])
-        for i in range(0, self.steps):
-            prediction = self.model.predict(inputs[i])
-            inputs.append(prediction)
-            self.y_.append(prediction)
-        return self.y_
-
-    def _multimodel_predict(self):
-        """
-        Predicts the predictors set number of steps further than test input is given.
-        Uses a different model for each further step ahead.
-        Only the additional steps are predicted using shifted models.
-
-        :return: the multimodel prediction values
-        """
-        self.y_ = self.models[0].predict(self.test['x'][:-1])
-        for i, model in self.models:
-            self.y_ = model.predict(self.test['x'][-1])
-        return self.y_
 
 
 class RandomForestPredictor(Predictor):
@@ -261,7 +210,6 @@ class RandomForestPredictor(Predictor):
         self.steps = steps
 
         if self.type == 'multimodel':
-            self.models = list()
             train_y = self.train['y']
             self.models.append(ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'], train_y))
             for i in range(1, steps + 1):
@@ -273,51 +221,6 @@ class RandomForestPredictor(Predictor):
             self.model = ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'], self.train['y'])
 
         self.time['init'] = time.time() - start
-
-    def predict(self):
-        """
-        :return: the predicted values according to set inputs as list
-        """
-        start = time.time()
-
-        if self.type is not None and self.steps > 1:
-            if self.type == 'recursive':
-                return self._recursive_predict()
-            if self.type == 'multimodel':
-                return self._multimodel_predict()
-        self.y_ = self.model.predict(self.test['x'])
-
-        self.time['predict'] = time.time() - start
-        return self.y_
-
-    def _recursive_predict(self):
-        """
-        Recursively predicts the predictors set number of steps further than test input is given.
-        For all given input values no recursion is used.
-
-        :return: the recursive prediction values
-        """
-        inputs = list()
-        inputs[0] = self.test['x'][-1]
-        self.y_ = self.model.predict(self.test['x'][:-1])
-        for i in range(0, self.steps):
-            prediction = self.model.predict(inputs[i])
-            inputs.append(prediction)
-            self.y_.append(prediction)
-        return self.y_
-
-    def _multimodel_predict(self):
-        """
-        Predicts the predictors set number of steps further than test input is given.
-        Uses a different model for each further step ahead.
-        Only the additional steps are predicted using shifted models.
-
-        :return: the multimodel prediction values
-        """
-        self.y_ = self.models[0].predict(self.test['x'][:-1])
-        for i, model in self.models:
-            self.y_ = model.predict(self.test['x'][-1])
-        return self.y_
 
 
 class KNearestNeighborsPredictor(Predictor):
@@ -347,7 +250,6 @@ class KNearestNeighborsPredictor(Predictor):
         self.steps = steps
 
         if self.type == 'multimodel':
-            self.models = list()
             train_y = self.train['y']
             self.models.append(
                 neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'], train_y))
@@ -359,51 +261,6 @@ class KNearestNeighborsPredictor(Predictor):
             self.model = neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'],
                                                                                          self.train['y'])
         self.time['init'] = time.time() - start
-
-    def predict(self):
-        """
-        :return: the predicted values according to set inputs as list
-        """
-        start = time.time()
-
-        if self.type is not None and self.steps > 1:
-            if self.type == 'recursive':
-                return self._recursive_predict()
-            if self.type == 'multimodel':
-                return self._multimodel_predict()
-        self.y_ = self.model.predict(self.test['x'])
-
-        self.time['predict'] = time.time() - start
-        return self.y_
-
-    def _recursive_predict(self):
-        """
-        Recursively predicts the predictors set number of steps further than test input is given.
-        For all given input values no recursion is used.
-
-        :return: the recursive prediction values
-        """
-        inputs = list()
-        inputs[0] = self.test['x'][-1]
-        self.y_ = self.model.predict(self.test['x'][:-1])
-        for i in range(0, self.steps):
-            prediction = self.model.predict(inputs[i])
-            inputs.append(prediction)
-            self.y_.append(prediction)
-        return self.y_
-
-    def _multimodel_predict(self):
-        """
-        Predicts the predictors set number of steps further than test input is given.
-        Uses a different model for each further step ahead.
-        Only the additional steps are predicted using shifted models.
-
-        :return: the multimodel prediction values
-        """
-        self.y_ = self.models[0].predict(self.test['x'][:-1])
-        for i, model in self.models:
-            self.y_ = model.predict(self.test['x'][-1])
-        return self.y_
 
 
 class ETSPredictor(Predictor):
@@ -440,7 +297,6 @@ class ETSPredictor(Predictor):
         """
         Predicts n future steps from the given training data
 
-        :param steps:   how many steps to predict
         :return:        the values of the forecast steps using the same period as the training data
         """
         start = time.time()
@@ -506,16 +362,15 @@ class ProphetPredictor(Predictor):
 
         self.time['init'] = time.time() - start
 
-    def predict(self, steps: int):
+    def predict(self):
         """
         Predicts n steps from the end of training data
 
-        :param steps:   the amount of steps to predict further
         :return:        the predicted values
         """
         start = time.time()
 
-        future = self.model.make_future_dataframe(periods=steps, freq=self.train['x'].infer_freq(warn=False))
+        future = self.model.make_future_dataframe(periods=self.steps, freq=self.train['x'].infer_freq(warn=False))
         self.y_ = self.model.predict(future)['yhat']
 
         self.time['predict'] = time.time() - start
@@ -529,7 +384,7 @@ class LSTMPredictor(Predictor):
 
 def create_artificial_features(series, frequency='H', steps=7):
     """
-    Creates artificial features for a given series
+    Creates artificial features for a given series with Timestamp Index
 
     :param series:      the base series to use
     :param frequency:   the frequency of values in the series
