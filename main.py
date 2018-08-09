@@ -19,6 +19,8 @@ estimatornums = [10, 20, 50]
 depthnums = [5, 10, 20]
 neighbornums = [5, 10, 20]
 
+testing = True
+
 if not os.path.exists(modeldir):
     os.makedirs(modeldir)
     models = list()
@@ -39,49 +41,65 @@ def multiforecast(model, station, pollutant):
     :param pollutant:   the pollutant to predict
     :return:
     """
-    stats = dict()
-    values = dict()
-    calls = {'random_forest': list(), 'decision_tree': list(), 'knn': list()}
+    stats = dict((forecast_type, list()) for forecast_type in forecast_types)
+    values = dict((forecast_type, list()) for forecast_type in forecast_types)
+
+    def create_filename(station, pollutant, forecast_type, mode, parameter):
+        namestring = f'{station}-{pollutant}-{forecast_type}'
+        if forecast_type == 'random_forest':
+            namestring = namestring + f'-estimators={parameter}'
+        elif forecast_type == 'decision_tree':
+            namestring = namestring + f'-depth={parameter}'
+        elif forecast_type == 'knn':
+            namestring = namestring + f'-neighbors={parameter}'
+        namestring += f'-{mode}'
+        filelocation = f'{modeldir}/{namestring}.pkl'
+
+        return (namestring, filelocation)
+
+    def use_model(model, callback, namestring, filelocation, forecast_type, statsdict):
+        info = namestring.split('-')
+
+        if not filelocation in models:
+            print(f'running forecast for {info[0]} on {info[1]} using {info[2]} and {info[3]}')
+            values[forecast_type] = callback()
+
+            pickle.dump(model, open(filelocation, 'wb'))
+        else:
+            print(f'model {namestring} already created, using old stats')
+            model = pickle.load(open(filelocation, 'rb'))
+
+        statsdict[forecast_type].append(model.predictor.get_prediction_stats())
+
     for estimators in estimatornums:
         for mode in modes:
-            calls['random_forest'].append(
-                model.forecast_series(station=station, pollutant=pollutant, rforest_estimators=estimators,
-                                      multistepmode=mode, steps=10))
+            filename = create_filename(station, pollutant, 'random_forest', mode, estimators)
+
+            def callback():
+                model.forecast_series(station=station, pollutant=pollutant, forecast_type='random_forest',
+                                      rforest_estimators=estimators, multistepmode=mode, steps=10)
+
+            use_model(model, callback, filename[0], filename[1], 'random_forest', stats)
+
     for depth in depthnums:
         for mode in modes:
-            calls['decision_tree'].append(
-                model.forecast_series(station=station, pollutant=pollutant, dtree_depth=depth, multistepmode=mode,
-                                      steps=10))
+            filename = create_filename(station, pollutant, 'decision_tree', mode, depth)
+
+            def callback():
+                model.forecast_series(station=station, pollutant=pollutant, forecast_type='decision_tree',
+                                      dtree_depth=depth, multistepmode=mode, steps=10)
+
+            use_model(model, callback, filename[0], filename[1], 'decision_tree', stats)
+
     for neighbors in neighbornums:
         for mode in modes:
-            calls['knn'].append(
-                model.forecast_series(station=station, pollutant=pollutant, knn_neighbors=neighbors, multistepmode=mode,
-                                      steps=10))
+            filename = create_filename(station, pollutant, 'knn', mode, neighbors)
 
-    for forecast_type, calllist in calls:
-        stats[forecast_type] = list()
-        for i in range(0, len(calllist)):
-            namestring = f'{station}-{pollutant}-{forecast_type}'
-            if forecast_type == 'random_forest':
-                namestring = namestring.join(f'-estimators={estimatornums[i]}')
-            elif forecast_type == 'decision_tree':
-                namestring = namestring.join(f'-depth={depthnums[i]}')
-            elif forecast_type == 'knn':
-                namestring = namestring.join(f'-neighbors={neighbornums[i]}')
-            filelocation = f'{modeldir}/{namestring}.pkl'
+            def callback():
+                model.forecast_series(station=station, pollutant=pollutant, forecast_type='knn',
+                                      knn_neighbors=neighbors, multistepmode=mode, steps=10)
 
-            info = namestring.split('-')
-
-            if not filelocation in models:
-                print(f'running forecast for {info[0]} on {info[1]} using {info[2]} and {info[3]}')
-                values[forecast_type] = calllist[i]
-
-                pickle.dump(model, open(filelocation, 'wb'))
-            else:
-                print(f'model {namestring} already created, using old stats')
-                model = pickle.load(open(filelocation, 'rb'))
-
-            stats[forecast_type].append(model.predictor.get_prediction_stats())
+            use_model(model, callback, filename[0], filename[1], 'knn', stats)
 
     return (stats, values)
 
@@ -99,6 +117,9 @@ if __name__ == '__main__':
         pollutant = '-'.join(info[1:])
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True)
 
+        if testing:
+            df = df.iloc[:200]
+
         rate = df.iloc[0]['AveragingTime']
         delta = get_timeframe(df.index)
 
@@ -114,13 +135,14 @@ if __name__ == '__main__':
 
             for forecast_type in comparison[0].keys():
                 for stats in comparison[0][forecast_type]:
-                    current_frame = pd.DataFrame.from_records(stats)
+                    current_frame = pd.DataFrame.from_records([stats])
                     current_frame['forecast_type'] = forecast_type
                     statsdf = pd.concat([statsdf, current_frame], ignore_index=True)
 
             statsdf['station'] = station
             statsdf = statsdf.set_index('station')
 
+            #### TODO possible problem when reading data and head changes for data used right now
             if not stats_exists:
                 statsdf.to_csv(statsfile)
                 stats_exists = True

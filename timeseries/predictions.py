@@ -110,7 +110,7 @@ class Predictor():
         """
 
         for i in range(0, len(self.models)):
-            self.y_s[i] = self.models[i].predict(self.test['x'])
+            self.y_s.append(self.models[i].predict(self.test['x']))
         return self.y_s
 
     def get_mse(self):
@@ -120,7 +120,7 @@ class Predictor():
         out = list()
         for i in range(0, len(self.y_s)):
             y_ = self.y_s[i]
-            out.append(_calc_mse(self.test['y'][i + 1:len(y_)], y_[:-(i+1)]))
+            out.append(_calc_mse(self.test['y'][i + 1:len(y_)], y_[:-(i + 1)]))
         return out
 
     def get_rmse(self):
@@ -130,7 +130,7 @@ class Predictor():
         out = list()
         for i in range(0, len(self.y_s)):
             y_ = self.y_s[i]
-            out.append(_calc_mse(self.test['y'][i + 1:len(y_)], y_[:-(i+1)]) ** 0.5)
+            out.append(_calc_mse(self.test['y'][i + 1:len(y_)], y_[:-(i + 1)]) ** 0.5)
         return out
 
     def get_mae(self):
@@ -140,7 +140,7 @@ class Predictor():
         out = list()
         for i in range(0, len(self.y_s)):
             y_ = self.y_s[i]
-            out.append(_calc_mae(self.test['y'][i + 1:len(y_)], y_[:-(i+1)]))
+            out.append(_calc_mae(self.test['y'][i + 1:len(y_)], y_[:-(i + 1)]))
         return out
 
     def get_initialization_time(self):
@@ -148,6 +148,7 @@ class Predictor():
 
     def get_prediction_time(self):
         return self.time['predict']
+
 
 class SingleStepPredictor(Predictor):
     def get_prediction_stats(self):
@@ -183,8 +184,8 @@ class LinearRegressionPredictor(SingleStepPredictor):
             self.models.append(linear_model.LinearRegression().fit(self.train['x'], train_y))
             for i in range(1, steps + 1):
                 # y values are rotated right for further predictions
-                train_y[:] = train_y[1:] + [train_y[0]]
-                self.models.append(linear_model.LinearRegression().fit(self.train['x'][:-i], train_y[:-i]))
+                train_y = pd.concat([train_y.iloc[1:], pd.Series(train_y.iloc[0])])
+                self.models.append(linear_model.LinearRegression().fit(self.train['x'].iloc[:-i], train_y.iloc[:-i]))
         else:
             self.model = linear_model.LinearRegression().fit(self.train['x'], self.train['y'])
 
@@ -221,8 +222,9 @@ class DecisionTreePredictor(SingleStepPredictor):
             self.models.append(tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'], train_y))
             for i in range(1, steps + 1):
                 # y values are rotated right for further predictions
-                train_y[:] = train_y[1:] + [train_y[0]]
-                self.models.append(tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'][:-i], train_y[:-i]))
+                train_y = pd.concat([train_y.iloc[1:], pd.Series(train_y.iloc[0])])
+                self.models.append(
+                    tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'].iloc[:-i], train_y.iloc[:-i]))
         else:
             self.model = tree.DecisionTreeRegressor(max_depth=depth).fit(self.train['x'], self.train['y'])
 
@@ -264,9 +266,10 @@ class RandomForestPredictor(SingleStepPredictor):
             self.models.append(ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'], train_y))
             for i in range(1, steps + 1):
                 # y values are rotated right for further predictions
-                train_y[:] = train_y[1:] + [train_y[0]]
+                train_y = pd.concat([train_y.iloc[1:], pd.Series(train_y.iloc[0])])
                 self.models.append(
-                    ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'][:-i], train_y[:-i]))
+                    ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'].iloc[:-i],
+                                                                                  train_y.iloc[:-i]))
         else:
             self.model = ensemble.RandomForestRegressor(n_estimators=n_estimators).fit(self.train['x'], self.train['y'])
 
@@ -310,9 +313,10 @@ class KNearestNeighborsPredictor(SingleStepPredictor):
             self.models.append(
                 neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'], train_y))
             for i in range(1, steps + 1):
-                train_y[:] = train_y[1:] + [train_y[0]]
+                train_y = pd.concat([train_y.iloc[1:], pd.Series(train_y.iloc[0])])
                 self.models.append(
-                    neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'][:-i], train_y[:-i]))
+                    neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'].iloc[:-i],
+                                                                                    train_y.iloc[:-i]))
         else:
             self.model = neighbors.KNeighborsRegressor(n_neighbors, weights=weights).fit(self.train['x'],
                                                                                          self.train['y'])
@@ -489,6 +493,5 @@ def create_lagged_features(series, frequency='H', steps=7):
         lagged['lag {}{}'.format(i, frequency)] = series.shift(i, freq=frequency)
 
     lagged.index = series.index
-    lagged = lagged[steps + 1:]
 
     return lagged.interpolate()

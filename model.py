@@ -64,7 +64,7 @@ class Model:
                                               testdata_y=test_y)
 
         self.predictor = predictor
-        return predictor.predict().tolist()
+        return predictor.predict()
 
     def import_csv(self, location):
         self.df = self.import_eea_weatherdata_csv(location)
