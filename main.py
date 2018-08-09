@@ -45,16 +45,17 @@ def multiforecast(model, station, pollutant):
     for estimators in estimatornums:
         for mode in modes:
             calls['random_forest'].append(
-                model.forecast_series(station=station, pollutant=pollutant, rforest_estimators=estimators, mode=mode,
-                                      steps=10))
+                model.forecast_series(station=station, pollutant=pollutant, rforest_estimators=estimators,
+                                      multistepmode=mode, steps=10))
     for depth in depthnums:
         for mode in modes:
             calls['decision_tree'].append(
-                model.forecast_series(station=station, pollutant=pollutant, dtree_depth=depth, mode=mode, steps=10))
+                model.forecast_series(station=station, pollutant=pollutant, dtree_depth=depth, multistepmode=mode,
+                                      steps=10))
     for neighbors in neighbornums:
         for mode in modes:
             calls['knn'].append(
-                model.forecast_series(station=station, pollutant=pollutant, knn_neighbors=neighbors, mode=mode,
+                model.forecast_series(station=station, pollutant=pollutant, knn_neighbors=neighbors, multistepmode=mode,
                                       steps=10))
 
     for forecast_type, calllist in calls:
