@@ -24,7 +24,7 @@ class Model:
         if test:
             if forecast_type == 'regression':
                 y = series
-                x = self.df.drop(columns=[pollutant, station])
+                x = self.df.drop(columns=[pollutant, 'AirQualityStationEoICode'])
             else:
                 y = series[lags + 1:]
                 x = predictions.create_artificial_features(series, steps=lags, frequency=frequency)
@@ -62,9 +62,13 @@ class Model:
         elif forecast_type == 'arima':
             predictor = predictions.ARIMAPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
                                                    testdata_y=test_y, order=arima_order)
+        elif forecast_type == 'regression':
+            predictor = predictions.LinearRegressionPredictor(traindata_x=train_x, traindata_y=train_y,
+                                                              testdata_x=test_x, testdata_y=test_y, mode=multistepmode,
+                                                              steps=steps)
         else:
             predictor = predictions.Predictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
-                                              testdata_y=test_y)
+                                              testdata_y=test_y, mode=multistepmode, steps=steps)
 
         self.predictor = predictor
         return predictor.predict()

@@ -13,7 +13,7 @@ statsfile = './stats.csv'
 files = glob.glob(datadir + '/*')
 keep_threshold = 0.95
 pandasrates = {'day': 'D', 'hour': 'H'}
-forecast_types = ['random_forest', 'decision_tree', 'knn']
+forecast_types = ['random_forest', 'decision_tree', 'knn', 'regression']
 modes = ['multimodel']
 estimatornums = [10, 20, 50]
 depthnums = [5, 10, 20]
@@ -44,7 +44,7 @@ def multiforecast(model, station, pollutant, frequency):
     stats = dict((forecast_type, list()) for forecast_type in forecast_types)
     values = dict((forecast_type, list()) for forecast_type in forecast_types)
 
-    def create_filename(station, pollutant, forecast_type, mode, parameter):
+    def create_filename(station, pollutant, forecast_type, mode, parameter=None):
         namestring = f'{station}-{pollutant}-{forecast_type}'
         if forecast_type == 'random_forest':
             namestring = namestring + f'-estimators={parameter}'
@@ -100,6 +100,17 @@ def multiforecast(model, station, pollutant, frequency):
                                       knn_neighbors=neighbors, multistepmode=mode, steps=10, frequency=frequency)
 
             use_model(model, callback, filename[0], filename[1], 'knn', stats)
+
+    # only use dfs with more than 1 other pollutant for regression
+    if len(model.df.columns.drop(['AirQualityStationEoICode', pollutant]).tolist()) > 1:
+        for mode in modes:
+            filename = create_filename(station, pollutant, 'regression', mode)
+
+            def callback():
+                model.forecast_series(station=station, pollutant=pollutant, forecast_type='regression', multistepmode=mode,
+                                      steps=10, frequency=frequency)
+
+            use_model(model, callback, filename[0], filename[1], 'regression', stats)
 
     return (stats, values)
 
