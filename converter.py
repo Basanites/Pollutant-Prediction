@@ -38,18 +38,21 @@ def convert():
         model.import_csv(csv)
         df = model.df
         try:
-            columns = list(df)
             station = df.iloc[0].AirQualityStationEoICode
+            averaging = df.iloc[0].AveragingTime
 
-            filename = f'{station}-{columns[-1]}.csv'
+            filename = f'{station}-{averaging}.csv'
             filelocation = f'{finaldir}/{filename}'
 
             sys.stdout.write(f'\r{i}/{len(pre)}\t\treading {csv}')
 
             if filelocation in post:
                 df2 = pd.read_csv(filelocation, index_col=0, parse_dates=[0], infer_datetime_format=True)
-                df = pd.concat([df, df2])
-                df = df[~df.index.duplicated(keep='first')]
+                df2 = df2.drop(columns=['AirQualityStationEoICode', 'AveragingTime'])
+
+                df = df.combine_first(df2)
+                df['AirQualityStationEoICode'] = station
+                df['AveragingTime'] = averaging
                 df = df.sort_index()
             else:
                 post.append(filelocation)
@@ -66,10 +69,19 @@ def remove_unneccessary():
         rate = df.iloc[0]['AveragingTime']
         delta = get_timeframe(df.index)
 
-        if not (((rate == 'day') and (len(df) >= keep_threshold * delta.days)) or (
-                (rate == 'hour') and (len(df) >= keep_threshold * delta.days * 24))):
-            print(f'removing {csv}')
+        columns = df.columns.drop(['AveragingTime', 'AirQualityStationEoICode'])
+
+        for column in columns:
+            if not (((rate == 'day') and (len(df[column].dropna()) >= keep_threshold * delta.days)) or (
+                    (rate == 'hour') and (len(df[column].dropna()) >= keep_threshold * delta.days * 24))):
+                print(f'removing {column} from {csv} because of bad resolution')
+                df = df.drop(columns=[column])
+
+        if not len(df.columns.drop(['AveragingTime', 'AirQualityStationEoICode'])):
+            print(f'removing {csv} because it has no entries anymore')
             os.remove(csv)
+        else:
+            df.to_csv(csv)
 
 
 if __name__ == '__main__':

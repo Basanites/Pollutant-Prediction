@@ -114,30 +114,25 @@ if __name__ == '__main__':
     for csv in files:
         info = csv.replace(f'{datadir}/', '').replace('.csv', '').split('-')
         station = info[0]
-        pollutant = '-'.join(info[1:])
+        rate = info[-1]
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True)
+        df = df.resample(pandasrates[rate]).bfill(limit=1).interpolate(method='time')
+        df = df.drop(columns=['AveragingTime'])
 
         if testing:
             df = df.iloc[:200]
 
-        rate = df.iloc[0]['AveragingTime']
         delta = get_timeframe(df.index)
 
-        if ((rate == 'day') and (len(df) >= keep_threshold * delta.days)) or (
-                (rate == 'hour') and (len(df) >= keep_threshold * delta.days * 24)):
-
-            df = df.resample(pandasrates[rate]).bfill(limit=1).interpolate(method='time')
+        for pollutant in df.columns.drop('AirQualityStationEoICode'):
             model = m.Model(df)
-
             comparison = multiforecast(model=model, station=station, pollutant=pollutant, frequency=pandasrates[rate])
-
             statsdf = pd.DataFrame()
 
-            for forecast_type in comparison[0].keys():
-                for stats in comparison[0][forecast_type]:  ## TODO should be compressable into single for loop
-                    current_frame = pd.DataFrame.from_records([stats])
-                    current_frame['forecast_type'] = forecast_type
-                    statsdf = pd.concat([statsdf, current_frame], ignore_index=True)
+            for forecast_type, stats in comparison[0].items():
+                current_frame = pd.DataFrame.from_records([stats])
+                current_frame['forecast_type'] = forecast_type
+                statsdf = pd.concat([statsdf, current_frame], ignore_index=True)
 
             statsdf['station'] = station
             statsdf['pollutant'] = pollutant
@@ -150,6 +145,3 @@ if __name__ == '__main__':
             else:
                 with open(statsfile, 'a') as f:
                     statsdf.to_csv(f, header=False)
-        else:
-            print(
-                f'less than {keep_threshold * 100}% of values measured for specified rate, skipping {csv}\ndelta={delta} rate={rate}')
