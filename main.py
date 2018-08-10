@@ -130,7 +130,7 @@ if __name__ == '__main__':
             statsdf = pd.DataFrame()
 
             for forecast_type, stats in comparison[0].items():
-                current_frame = pd.DataFrame.from_records([stats])
+                current_frame = pd.DataFrame.from_records(stats)
                 current_frame['forecast_type'] = forecast_type
                 statsdf = pd.concat([statsdf, current_frame], ignore_index=True)
 
