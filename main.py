@@ -33,7 +33,7 @@ else:
     stats_exists = True
 
 
-def multiforecast(model, station, pollutant):
+def multiforecast(model, station, pollutant, frequency):
     """
     Runs all possible forecasts using the given parameters
     :param model:       the model to use
@@ -77,7 +77,7 @@ def multiforecast(model, station, pollutant):
 
             def callback():
                 model.forecast_series(station=station, pollutant=pollutant, forecast_type='random_forest',
-                                      rforest_estimators=estimators, multistepmode=mode, steps=10)
+                                      rforest_estimators=estimators, multistepmode=mode, steps=10, frequency=frequency)
 
             use_model(model, callback, filename[0], filename[1], 'random_forest', stats)
 
@@ -87,7 +87,7 @@ def multiforecast(model, station, pollutant):
 
             def callback():
                 model.forecast_series(station=station, pollutant=pollutant, forecast_type='decision_tree',
-                                      dtree_depth=depth, multistepmode=mode, steps=10)
+                                      dtree_depth=depth, multistepmode=mode, steps=10, frequency=frequency)
 
             use_model(model, callback, filename[0], filename[1], 'decision_tree', stats)
 
@@ -97,7 +97,7 @@ def multiforecast(model, station, pollutant):
 
             def callback():
                 model.forecast_series(station=station, pollutant=pollutant, forecast_type='knn',
-                                      knn_neighbors=neighbors, multistepmode=mode, steps=10)
+                                      knn_neighbors=neighbors, multistepmode=mode, steps=10, frequency=frequency)
 
             use_model(model, callback, filename[0], filename[1], 'knn', stats)
 
@@ -126,15 +126,15 @@ if __name__ == '__main__':
         if ((rate == 'day') and (len(df) >= keep_threshold * delta.days)) or (
                 (rate == 'hour') and (len(df) >= keep_threshold * delta.days * 24)):
 
-            df = df.resample(pandasrates[rate]).interpolate(method='time')
+            df = df.resample(pandasrates[rate]).bfill(limit=1).interpolate(method='time')
             model = m.Model(df)
 
-            comparison = multiforecast(model=model, station=station, pollutant=pollutant)
+            comparison = multiforecast(model=model, station=station, pollutant=pollutant, frequency=pandasrates[rate])
 
             statsdf = pd.DataFrame()
 
             for forecast_type in comparison[0].keys():
-                for stats in comparison[0][forecast_type]:
+                for stats in comparison[0][forecast_type]: ## TODO should be compressable into single for loop
                     current_frame = pd.DataFrame.from_records([stats])
                     current_frame['forecast_type'] = forecast_type
                     statsdf = pd.concat([statsdf, current_frame], ignore_index=True)
@@ -152,3 +152,5 @@ if __name__ == '__main__':
         else:
             print(
                 f'less than {keep_threshold * 100}% of values measured for specified rate, skipping {csv}\ndelta={delta} rate={rate}')
+
+#TODO use frequency as input, so daily data gets shifted correctly

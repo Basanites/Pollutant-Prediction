@@ -15,7 +15,7 @@ class Model:
 
     def forecast_series(self, station, pollutant, forecast_type='random_forest', rforest_estimators=10, dtree_depth=5,
                         knn_neighbors=5, knn_weights='distance', ets_trend='additive', ets_season='additive',
-                        ets_seasonlength=24, arima_order=(2, 1, 2), steps=1, multistepmode='recursive', lags=24,
+                        ets_seasonlength=24, arima_order=(2, 1, 2), steps=1, multistepmode='recursive', lags=24, frequency='H',
                         test=True):
         forecast_type = forecast_type.lower()
         series = self.df[self.df.AirQualityStationEoICode == station][pollutant]
@@ -23,7 +23,7 @@ class Model:
 
         if test:
             y = series[lags + 1:]
-            x = predictions.create_artificial_features(series, steps=lags)
+            x = predictions.create_artificial_features(series, steps=lags, frequency=frequency)
             x = x[lags + 1:]
             division = math.floor(len(x) / (4 / 3))
 
@@ -34,7 +34,7 @@ class Model:
             test_y = y[division:]
         else:
             train_y = series
-            train_x = predictions.create_artificial_features(train_y, steps=lags)
+            train_x = predictions.create_artificial_features(train_y, steps=lags, frequency=frequency)
             train_y = train_y[lags + 1:]
             test_y = pd.Series()
             test_x = pd.DataFrame()
