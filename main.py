@@ -134,12 +134,13 @@ if __name__ == '__main__':
             statsdf = pd.DataFrame()
 
             for forecast_type in comparison[0].keys():
-                for stats in comparison[0][forecast_type]: ## TODO should be compressable into single for loop
+                for stats in comparison[0][forecast_type]:  ## TODO should be compressable into single for loop
                     current_frame = pd.DataFrame.from_records([stats])
                     current_frame['forecast_type'] = forecast_type
                     statsdf = pd.concat([statsdf, current_frame], ignore_index=True)
 
             statsdf['station'] = station
+            statsdf['pollutant'] = pollutant
             statsdf = statsdf.set_index('station')
 
             #### TODO possible problem when reading data and head changes for data used right now
@@ -152,5 +153,3 @@ if __name__ == '__main__':
         else:
             print(
                 f'less than {keep_threshold * 100}% of values measured for specified rate, skipping {csv}\ndelta={delta} rate={rate}')
-
-#TODO use frequency as input, so daily data gets shifted correctly
