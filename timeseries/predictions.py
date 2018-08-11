@@ -42,14 +42,16 @@ class Predictor():
         if not len(self.y_):
             self.predict()
 
-        if self.type != 'single':
-            stats['mse'] = self.get_multistep_mse()
-            stats['rmse'] = self.get_multistep_rmse()
-            stats['mae'] = self.get_multistep_mae()
-        else:
+        if self.type == 'single' or self.type == 'multistep':
             stats['mse'] = self.get_mse()
             stats['rmse'] = self.get_rmse()
             stats['mae'] = self.get_mae()
+
+        else:
+            stats['mse'] = self.get_multistep_mse()
+            stats['rmse'] = self.get_multistep_rmse()
+            stats['mae'] = self.get_multistep_mae()
+
         # needs to be subclass based because fits are handled differently
         # stats['residual mse'] = self.get_residual_mse()
         # stats['residual rmse'] = self.get_residual_rmse()

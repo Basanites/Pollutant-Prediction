@@ -132,7 +132,7 @@ def multiforecast(model, station, pollutant, frequency):
         model.forecast_series(station=station, pollutant=pollutant, forecast_type='arima', steps=10,
                               frequency=frequency)
 
-    use_model(model, callback, filename[0], filename[1], 'ets', stats)
+    use_model(model, callback, filename[0], filename[1], 'arima', stats)
 
     return (stats, values)
 
