@@ -70,11 +70,13 @@ class Predictor():
 
         if self.type is not None and self.steps > 1:
             if self.type == 'recursive':
+                prediction = self._recursive_predict()
                 self.time['predict'] = time.time() - start
-                return self._recursive_predict()
+                return prediction
             if self.type == 'multimodel':
+                prediction = self._multimodel_predict()
                 self.time['predict'] = time.time() - start
-                return self._multimodel_predict()
+                return prediction
         self.y_ = self.model.predict(self.test['x'])
 
         self.time['predict'] = time.time() - start
