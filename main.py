@@ -150,7 +150,10 @@ if __name__ == '__main__':
         rate = info[-1]
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True)
         ### TODO doesn't seem to add missing timesteps in -> problem in ets
-        df = df.resample(pandasrates[rate]).bfill(limit=1).interpolate(method='time')
+        if pandasrates[rate] == 'D':
+            df = df.resample(pandasrates[rate]).bfill(limit=1).interpolate(method='time')   # bfill is used here, because daily values act up otherwise
+        else:
+            df = df.resample(pandasrates[rate]).interpolate(method='time')
         df = df.drop(columns=['AveragingTime'])
 
         if testing:
