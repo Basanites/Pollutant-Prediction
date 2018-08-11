@@ -13,7 +13,7 @@ statsfile = './stats.csv'
 files = glob.glob(datadir + '/*')
 keep_threshold = 0.95
 pandasrates = {'day': 'D', 'hour': 'H'}
-forecast_types = ['random_forest', 'decision_tree', 'knn', 'regression', 'ets']
+forecast_types = ['random_forest', 'decision_tree', 'knn', 'regression', 'ets', 'arima']
 modes = ['multimodel']
 estimatornums = [10, 20, 50]
 depthnums = [5, 10, 20]
@@ -125,6 +125,14 @@ def multiforecast(model, station, pollutant, frequency):
                                       ets_box_cox=box_cox, steps=10, frequency=frequency)
 
             use_model(model, callback, filename[0], filename[1], 'ets', stats)
+
+    filename = create_filename(station, pollutant, 'arima', 'multistep')
+
+    def callback():
+        model.forecast_series(station=station, pollutant=pollutant, forecast_type='arima', steps=10,
+                              frequency=frequency)
+
+    use_model(model, callback, filename[0], filename[1], 'ets', stats)
 
     return (stats, values)
 

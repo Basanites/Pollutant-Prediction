@@ -1,12 +1,11 @@
 import calendar
 import math
 import time
-import random
 
 import pandas as pd
 from fbprophet import Prophet
+from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
-from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 
@@ -391,7 +390,7 @@ class ARIMAPredictor(Predictor):
     Provides functionality to predict from training data using ARIMA model
     """
 
-    def __init__(self, traindata_x, traindata_y, testdata_x, order, testdata_y=None):
+    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y=None):
         """
         Initializes the ARIMA Predictor object
 
@@ -404,7 +403,8 @@ class ARIMAPredictor(Predictor):
         start = time.time()
 
         super(ARIMAPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
-        self.model = ARIMA(traindata_x, order=order)
+        self.model = auto_arima(traindata_x, start_p=1, start_q=1, max_p=4, max_q=4, error_action='ignore',
+                                suppress_warnings=True, stepwise=True)
 
         self.time['init'] = time.time() - start
 
@@ -416,10 +416,10 @@ class ARIMAPredictor(Predictor):
         """
         start = time.time()
 
-        self.model = self.model.fit(disp=0)
+        self.y_ = self.model.predict(self.steps)
 
         self.time['predict'] = time.time() - start
-        pass
+        return self.y_
 
 
 class ProphetPredictor(Predictor):

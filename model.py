@@ -25,7 +25,7 @@ class Model:
             if forecast_type == 'regression':
                 y = series
                 x = self.df.drop(columns=[pollutant, 'AirQualityStationEoICode'])
-            elif forecast_type == 'ets':
+            elif forecast_type == 'ets' or forecast_type == 'arima':
                 x = series
                 y = series
             else:
@@ -70,7 +70,7 @@ class Model:
                                                  damped=ets_damped, box_cox=ets_box_cox)
         elif forecast_type == 'arima':
             predictor = predictions.ARIMAPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
-                                                   testdata_y=test_y, order=arima_order)
+                                                   testdata_y=test_y)
         elif forecast_type == 'regression':
             predictor = predictions.LinearRegressionPredictor(traindata_x=train_x, traindata_y=train_y,
                                                               testdata_x=test_x, testdata_y=test_y, mode=multistepmode,
