@@ -179,7 +179,9 @@ class LinearRegressionPredictor(SingleStepPredictor):
         """
         start = time.time()
 
-        super(LinearRegressionPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y, mode, steps)
+        super(LinearRegressionPredictor, self).__init__(traindata_x=traindata_x, traindata_y=traindata_y,
+                                                        testdata_x=testdata_x, testdata_y=testdata_y, mode=mode,
+                                                        steps=steps)
 
         if self.type == 'multimodel':
             train_y = self.train['y']
@@ -213,10 +215,10 @@ class DecisionTreePredictor(SingleStepPredictor):
         """
         start = time.time()
 
-        super(DecisionTreePredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+        super(DecisionTreePredictor, self).__init__(traindata_x=traindata_x, traindata_y=traindata_y,
+                                                    testdata_x=testdata_x, testdata_y=testdata_y, mode=mode,
+                                                    steps=steps)
 
-        self.type = mode.lower()
-        self.steps = steps
         self.depth = depth
 
         if self.type == 'multimodel':
@@ -257,10 +259,10 @@ class RandomForestPredictor(SingleStepPredictor):
         """
         start = time.time()
 
-        super(RandomForestPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+        super(RandomForestPredictor, self).__init__(traindata_x=traindata_x, traindata_y=traindata_y,
+                                                    testdata_x=testdata_x, testdata_y=testdata_y, mode=mode,
+                                                    steps=steps)
 
-        self.type = mode.lower() if mode else 'single'
-        self.steps = steps
         self.n_estimators = n_estimators
 
         if self.type == 'multimodel':
@@ -304,10 +306,10 @@ class KNearestNeighborsPredictor(SingleStepPredictor):
         """
         start = time.time()
 
-        super(KNearestNeighborsPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+        super(KNearestNeighborsPredictor, self).__init__(traindata_x=traindata_x, traindata_y=traindata_y,
+                                                         testdata_x=testdata_x, testdata_y=testdata_y, mode=mode,
+                                                         steps=steps)
 
-        self.type = mode.lower()
-        self.steps = steps
         self.n_neighbors = n_neighbors
 
         if self.type == 'multimodel':
@@ -351,7 +353,8 @@ class ETSPredictor(Predictor):
         """
         start = time.time()
 
-        super(ETSPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+        super(ETSPredictor, self).__init__(traindata_x=traindata_x, traindata_y=traindata_y,
+                                           testdata_x=testdata_x, testdata_y=testdata_y, steps=steps)
         self.model = ExponentialSmoothing(self.train['y'],
                                           trend=trendtype,
                                           seasonal=seasontype,
