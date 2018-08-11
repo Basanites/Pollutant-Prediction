@@ -1,6 +1,7 @@
 import calendar
 import math
 import time
+import random
 
 import pandas as pd
 from fbprophet import Prophet
@@ -337,8 +338,8 @@ class ETSPredictor(Predictor):
     Provides functionality to predict outputs by learning the training data using ETS
     """
 
-    def __init__(self, traindata_x, traindata_y, testdata_x, seasonlength: int, trendtype='additive',
-                 seasontype='additive', steps=1, testdata_y=None):
+    def __init__(self, traindata_x, traindata_y, testdata_x, seasonlength: int, frequency, damped=False, box_cox=False,
+                 trendtype='additive', seasontype='additive', steps=1, testdata_y=None):
         """
         Initializes the ETS Predictor object
 
@@ -355,13 +356,19 @@ class ETSPredictor(Predictor):
 
         super(ETSPredictor, self).__init__(traindata_x=traindata_x, traindata_y=traindata_y,
                                            testdata_x=testdata_x, testdata_y=testdata_y, steps=steps)
-        self.model = ExponentialSmoothing(self.train['y'],
-                                          trend=trendtype,
-                                          seasonal=seasontype,
-                                          seasonal_periods=seasonlength).fit(optimized=True)
+        self.model = ExponentialSmoothing(self.train['y'], trend=trendtype, freq=frequency, damped=damped,
+                                          seasonal=seasontype, seasonal_periods=seasonlength).fit(use_boxcox=box_cox)
         self.steps = steps
+        self.box_cox = box_cox
+        self.damped = damped
 
         self.time['init'] = time.time() - start
+
+    def get_prediction_stats(self):
+        stats = super(ETSPredictor, self).get_prediction_stats()
+        stats['box_cox'] = self.box_cox
+        stats['damped'] = self.damped
+        return stats
 
     def predict(self):
         """
@@ -370,8 +377,10 @@ class ETSPredictor(Predictor):
         :return:        the values of the forecast steps using the same period as the training data
         """
         start = time.time()
+        begin = self.test['x'].index[0]
+        end = self.test['x'].index[self.steps]
 
-        self.y_ = self.model.forecast(self.steps)
+        self.y_ = self.model.predict(begin, end).tolist()
 
         self.time['predict'] = time.time() - start
         return self.y_

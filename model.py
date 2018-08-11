@@ -15,8 +15,8 @@ class Model:
 
     def forecast_series(self, station, pollutant, forecast_type='random_forest', rforest_estimators=10, dtree_depth=5,
                         knn_neighbors=5, knn_weights='distance', ets_trend='additive', ets_season='additive',
-                        ets_seasonlength=24, arima_order=(2, 1, 2), steps=1, multistepmode='multimodel', lags=24,
-                        frequency='H', test=True):
+                        ets_seasonlength=24, ets_damped=False, ets_box_cox=False, arima_order=(2, 1, 2), steps=1,
+                        multistepmode='multimodel', lags=24, frequency='H', test=True):
         forecast_type = forecast_type.lower()
         series = self.df[self.df.AirQualityStationEoICode == station][pollutant]
         series = series[~series.index.duplicated(lags)]
@@ -25,6 +25,9 @@ class Model:
             if forecast_type == 'regression':
                 y = series
                 x = self.df.drop(columns=[pollutant, 'AirQualityStationEoICode'])
+            elif forecast_type == 'ets':
+                x = series
+                y = series
             else:
                 y = series[lags + 1:]
                 x = predictions.create_artificial_features(series, steps=lags, frequency=frequency)
@@ -43,7 +46,7 @@ class Model:
             else:
                 train_y = series[lags + 1:]
                 train_x = predictions.create_artificial_features(series, steps=lags, frequency=frequency)[lags + 1:]
-                
+
             test_y = pd.Series()
             test_x = pd.DataFrame()
 
@@ -63,7 +66,8 @@ class Model:
         elif forecast_type == 'ets':
             predictor = predictions.ETSPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
                                                  testdata_y=test_y, trendtype=ets_trend, seasontype=ets_season,
-                                                 seasonlength=ets_seasonlength, steps=steps)
+                                                 seasonlength=ets_seasonlength, steps=steps, frequency=frequency,
+                                                 damped=ets_damped, box_cox=ets_box_cox)
         elif forecast_type == 'arima':
             predictor = predictions.ARIMAPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
                                                    testdata_y=test_y, order=arima_order)

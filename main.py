@@ -13,7 +13,7 @@ statsfile = './stats.csv'
 files = glob.glob(datadir + '/*')
 keep_threshold = 0.95
 pandasrates = {'day': 'D', 'hour': 'H'}
-forecast_types = ['random_forest', 'decision_tree', 'knn', 'regression']
+forecast_types = ['random_forest', 'decision_tree', 'knn', 'regression', 'ets']
 modes = ['multimodel']
 estimatornums = [10, 20, 50]
 depthnums = [5, 10, 20]
@@ -47,11 +47,13 @@ def multiforecast(model, station, pollutant, frequency):
     def create_filename(station, pollutant, forecast_type, mode, parameter=None):
         namestring = f'{station}-{pollutant}-{forecast_type}'
         if forecast_type == 'random_forest':
-            namestring = namestring + f'-estimators={parameter}'
+            namestring += f'-estimators={parameter}'
         elif forecast_type == 'decision_tree':
-            namestring = namestring + f'-depth={parameter}'
+            namestring += f'-depth={parameter}'
         elif forecast_type == 'knn':
-            namestring = namestring + f'-neighbors={parameter}'
+            namestring += f'-neighbors={parameter}'
+        elif forecast_type == 'ets':
+            namestring += f'-box_cox={parameter[0]}-dampening={parameter[1]}'
         namestring += f'-{mode}'
         filelocation = f'{modeldir}/{namestring}.pkl'
 
@@ -59,9 +61,10 @@ def multiforecast(model, station, pollutant, frequency):
 
     def use_model(model, callback, namestring, filelocation, forecast_type, statsdict):
         info = namestring.split('-')
+        infostring = ', '.join(info)
 
         if not filelocation in models:
-            print(f'running forecast for {info[0]} on {info[1]} using {info[2]} and {info[3]}')
+            print(f'running forecast for {infostring}')
             values[forecast_type] = callback()
 
             pickle.dump(model, open(filelocation, 'wb'))
@@ -107,10 +110,21 @@ def multiforecast(model, station, pollutant, frequency):
             filename = create_filename(station, pollutant, 'regression', mode)
 
             def callback():
-                model.forecast_series(station=station, pollutant=pollutant, forecast_type='regression', multistepmode=mode,
+                model.forecast_series(station=station, pollutant=pollutant, forecast_type='regression',
+                                      multistepmode=mode,
                                       steps=10, frequency=frequency)
 
             use_model(model, callback, filename[0], filename[1], 'regression', stats)
+
+    for box_cox in [True, False]:
+        for dampening in [True, False]:
+            filename = create_filename(station, pollutant, 'ets', 'multistep', [box_cox, dampening])
+
+            def callback():
+                model.forecast_series(station=station, pollutant=pollutant, forecast_type='ets', ets_damped=dampening,
+                                      ets_box_cox=box_cox, steps=10, frequency=frequency)
+
+            use_model(model, callback, filename[0], filename[1], 'ets', stats)
 
     return (stats, values)
 
