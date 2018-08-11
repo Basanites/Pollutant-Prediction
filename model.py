@@ -40,13 +40,12 @@ class Model:
             if forecast_type == 'regression':
                 train_y = series
                 train_x = self.df.drop(columns=[pollutant, 'AirQualityStationEoICode'])
-                test_y = pd.Series()
-                test_x = pd.DataFrame()
             else:
                 train_y = series[lags + 1:]
                 train_x = predictions.create_artificial_features(series, steps=lags, frequency=frequency)[lags + 1:]
-                test_y = pd.Series()
-                test_x = pd.DataFrame()
+                
+            test_y = pd.Series()
+            test_x = pd.DataFrame()
 
         if forecast_type == 'random_forest':
             predictor = predictions.RandomForestPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
