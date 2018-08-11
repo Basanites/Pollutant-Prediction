@@ -141,6 +141,7 @@ if __name__ == '__main__':
         station = info[0]
         rate = info[-1]
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True)
+        ### TODO doesn't seem to add missing timesteps in -> problem in ets
         df = df.resample(pandasrates[rate]).bfill(limit=1).interpolate(method='time')
         df = df.drop(columns=['AveragingTime'])
 
