@@ -31,7 +31,7 @@ class Predictor():
         self.model = None
         self.y_ = list()
         self.y_s = list()
-        self.type = mode.lower(),
+        self.type = mode.lower()
         self.steps = steps
         self.models = list()
         self.time = dict()
