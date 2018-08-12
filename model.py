@@ -15,7 +15,7 @@ class Model:
 
     def forecast_series(self, station, pollutant, forecast_type='random_forest', rforest_estimators=10, dtree_depth=5,
                         knn_neighbors=5, knn_weights='distance', ets_trend='additive', ets_season='additive',
-                        ets_seasonlength=24, ets_damped=False, ets_box_cox=False, arima_order=(2, 1, 2), steps=1,
+                        ets_seasonlength=24, ets_damped=False, ets_box_cox=False, steps=1,
                         multistepmode='multimodel', lags=24, frequency='H', test=True):
         forecast_type = forecast_type.lower()
         series = self.df[self.df.AirQualityStationEoICode == station][pollutant]
@@ -25,9 +25,13 @@ class Model:
             if forecast_type == 'regression':
                 y = series
                 x = self.df.drop(columns=[pollutant, 'AirQualityStationEoICode'])
-            elif forecast_type == 'ets' or forecast_type == 'arima':
+            elif forecast_type in ['ets', 'arima']:
                 x = series
                 y = series
+            elif forecast_type == 'prophet':
+                temp = series.reset_index()
+                x = temp['Timestamp']
+                y = temp[pollutant]
             else:
                 y = series[lags + 1:]
                 x = predictions.create_artificial_features(series, steps=lags, frequency=frequency)
@@ -75,6 +79,9 @@ class Model:
             predictor = predictions.LinearRegressionPredictor(traindata_x=train_x, traindata_y=train_y,
                                                               testdata_x=test_x, testdata_y=test_y, mode=multistepmode,
                                                               steps=steps)
+        elif forecast_type == 'prophet':
+            predictor = predictions.ProphetPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
+                                                     testdata_y=test_y, steps=steps)
         else:
             predictor = predictions.Predictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
                                               testdata_y=test_y, mode=multistepmode, steps=steps)

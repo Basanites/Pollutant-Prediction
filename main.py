@@ -13,7 +13,7 @@ statsfile = './stats.csv'
 files = glob.glob(datadir + '/*')
 keep_threshold = 0.95
 pandasrates = {'day': 'D', 'hour': 'H'}
-forecast_types = ['random_forest', 'decision_tree', 'knn', 'regression', 'ets', 'arima']
+forecast_types = ['random_forest', 'decision_tree', 'knn', 'regression', 'ets', 'arima', 'prophet']
 modes = ['multimodel']
 estimatornums = [10, 20, 50]
 depthnums = [5, 10, 20]
@@ -134,6 +134,14 @@ def multiforecast(model, station, pollutant, frequency):
 
     use_model(model, callback, filename[0], filename[1], 'arima', stats)
 
+    filename = create_filename(station, pollutant, 'prophet', 'multistep')
+
+    def callback():
+        model.forecast_series(station=station, pollutant=pollutant, forecast_type='prophet', steps=10,
+                              frequency=frequency)
+
+    use_model(model, callback, filename[0], filename[1], 'prophet', stats)
+
     return (stats, values)
 
 
@@ -151,7 +159,8 @@ if __name__ == '__main__':
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True)
         ### TODO doesn't seem to add missing timesteps in -> problem in ets
         if pandasrates[rate] == 'D':
-            df = df.resample(pandasrates[rate]).bfill(limit=1).interpolate(method='time')   # bfill is used here, because daily values act up otherwise
+            df = df.resample(pandasrates[rate]).bfill(limit=1).interpolate(
+                method='time')  # bfill is used here, because daily values act up otherwise
         else:
             df = df.resample(pandasrates[rate]).interpolate(method='time')
         df = df.drop(columns=['AveragingTime'])

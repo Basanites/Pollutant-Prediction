@@ -429,7 +429,7 @@ class ProphetPredictor(Predictor):
     Provides functionality to predict from training data using FBProphet
     """
 
-    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y=None):
+    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y=None, steps=1):
         """
         Initializes the Prophet Predictor object
         :param traindata_x: training x vector
@@ -438,7 +438,7 @@ class ProphetPredictor(Predictor):
         :param testdata_y:  testing y vector (only used when testing model accuracy)
         """
         start = time.time()
-        super(ProphetPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y)
+        super(ProphetPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y, steps=steps)
         self.model = Prophet().fit(pd.DataFrame(data={'ds': self.train['x'], 'y': self.train['y']}))
 
         self.time['init'] = time.time() - start
@@ -451,11 +451,12 @@ class ProphetPredictor(Predictor):
         """
         start = time.time()
 
-        future = self.model.make_future_dataframe(periods=self.steps, freq=self.train['x'].infer_freq(warn=False))
+        future = self.model.make_future_dataframe(periods=self.steps)[-self.steps:]
         self.y_ = self.model.predict(future)['yhat']
 
         self.time['predict'] = time.time() - start
         return self.y_
+
 
 
 class LSTMPredictor(Predictor):
