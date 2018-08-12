@@ -164,6 +164,7 @@ if __name__ == '__main__':
         else:
             df = df.resample(pandasrates[rate]).interpolate(method='time')
         df = df.drop(columns=['AveragingTime'])
+        df['AirQualityStationEoICode'] = station
 
         if testing:
             df = df.iloc[:200]
