@@ -7,6 +7,8 @@ from fbprophet import Prophet
 from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from tensorflow.python.keras import Sequential
+from tensorflow.python.keras.layers import GRU, Dense, Dropout
 
 
 def _calc_mae(expected, actual):
@@ -457,6 +459,23 @@ class ProphetPredictor(Predictor):
         self.time['predict'] = time.time() - start
         return self.y_
 
+
+class GRUPredictor(Predictor):
+    def __init__(self, traindata_x, traindata_y, testdata_x, testdata_y, steps=1, units=24, dropout_rate=0.2, loss='mse',
+                 optimizer='rmsprop', activation='tanh'):
+        start = time.time()
+
+        super(GRUPredictor, self).__init__(traindata_x, traindata_y, testdata_x, testdata_y, steps=steps)
+        self.model = Sequential()
+        self.model.add(GRU(units, input_shape=(None, traindata_x.shape[1])))
+        self.model.add(Dropout(dropout_rate))
+        self.model.add(Dense(1))
+        self.model.compile(loss=loss, optimizer=optimizer)
+
+        self.time['init'] = time.time() - start
+
+    def predict(self):
+        pass
 
 
 class LSTMPredictor(Predictor):

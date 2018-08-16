@@ -16,6 +16,7 @@ class Model:
     def forecast_series(self, station, pollutant, forecast_type='random_forest', rforest_estimators=10, dtree_depth=5,
                         knn_neighbors=5, knn_weights='distance', ets_trend='additive', ets_season='additive',
                         ets_seasonlength=24, ets_damped=False, ets_box_cox=False, steps=1,
+                        units=24, dropout_rate=0.2, loss='mse', optimizer='rmsprop', activation='tanh',
                         multistepmode='multimodel', lags=24, frequency='H', test=True):
         forecast_type = forecast_type.lower()
         series = self.df[self.df.AirQualityStationEoICode == station][pollutant]
@@ -82,6 +83,10 @@ class Model:
         elif forecast_type == 'prophet':
             predictor = predictions.ProphetPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
                                                      testdata_y=test_y, steps=steps)
+        elif forecast_type == 'gru':
+            predictor = predictions.GRUPredictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
+                                                 testdata_y=test_y, units=units, dropout_rate=dropout_rate, loss=loss,
+                                                 optimizer=optimizer, activation=activation)
         else:
             predictor = predictions.Predictor(traindata_x=train_x, traindata_y=train_y, testdata_x=test_x,
                                               testdata_y=test_y, mode=multistepmode, steps=steps)
