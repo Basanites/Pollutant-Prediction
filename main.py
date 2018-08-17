@@ -13,6 +13,13 @@ from timeseries.predictions import create_artificial_features
 
 
 def resample_dataframe(dataframe, rate='H'):
+    """
+    Resamples a dataframe according to a given rate.
+
+    :param dataframe:   The dataframe to resample
+    :param rate:        The rate to use ('D' or 'H')
+    :return:            The resampled dataframe
+    """
     if rate == 'D':
         dataframe = dataframe.resample(rate).bfill(limit=1).interpolate(
             method='time')  # bfill is used here, because daily values act up otherwise
@@ -22,6 +29,12 @@ def resample_dataframe(dataframe, rate='H'):
 
 
 def get_info(csv_path):
+    """
+    Gets station name and rate from a csv path string
+
+    :param csv_path:    The path string
+    :return:            The station name and rate
+    """
     info = csv_path.replace(f'{datadir}/', '').replace('.csv', '').split('-')
     station_name = info[0]
     rate = {'day': 'D', 'hour': 'H'}[info[-1]]
@@ -29,6 +42,16 @@ def get_info(csv_path):
 
 
 def create_gru(weights, input_shape, dropout_rate, learning_rate):
+    """
+    Creates a GRU based RNN using the given input parameters.
+
+    :param weights:         The amount of output weights for GRU layer
+    :param input_shape:     The shape of the inputs
+    :param dropout_rate:    The dropout rate after GRU layer
+    :param learning_rate:   The learning rate of the optimizer
+    :return:                The compiled model
+    """
+
     optimizer = optimizers.RMSprop(lr=learning_rate)
 
     model = Sequential()
@@ -39,23 +62,32 @@ def create_gru(weights, input_shape, dropout_rate, learning_rate):
     return model
 
 
-def scale_series(series, scaler=None, feature_range=(-1, 1)):
+def scale_series(series, feature_range=(-1, 1)):
+    """
+    Downscales a series to given feature_range.
+
+    :param series:          The series to downscale
+    :param feature_range:   The range of values after scaling
+    :return:                The scaled series and used scaler
+    """
     x = series.values
     x = x.reshape(len(x), 1)
-
-    if scaler:
-        scaled = scaler.transform(x)
-    else:
-        scaler = MinMaxScaler(feature_range=feature_range)
-        scaler = scaler.fit(x)
-        scaled = scaler.transform(x)
-
+    scaler = MinMaxScaler(feature_range=feature_range)
+    scaler = scaler.fit(x)
+    scaled = scaler.transform(x)
     scaled = scaled.reshape(len(scaled))
     scaled_series = pd.Series(data=scaled, index=series.index)
     return scaled_series, scaler
 
 
 def scale_dataframe(dataframe, feature_range=(-1, 1)):
+    """
+    Downscales all values in a dataframe to given feature_range.
+
+    :param dataframe:       The dataframe to downscale
+    :param feature_range:   The range of values after scaling
+    :return:                The scaled dataframe and used scaler
+    """
     x = dataframe.values
     scaler = MinMaxScaler(feature_range=feature_range)
     scaler = scaler.fit(x)
@@ -65,6 +97,13 @@ def scale_dataframe(dataframe, feature_range=(-1, 1)):
 
 
 def rescale_series(series, scaler):
+    """
+    Rescales a series using given scaler.
+
+    :param series:  The series to rescale
+    :param scaler:  The scaler used to scale the series
+    :return:        The rescaled series
+    """
     x = series.values
     x = x.reshape(len(x), 1)
     rescaled = scaler.inverse_transform(x)
@@ -74,6 +113,13 @@ def rescale_series(series, scaler):
 
 
 def rescale_dataframe(dataframe, scaler):
+    """
+    Rescales a dataframe using given scaler.
+
+    :param dataframe:   The dataframe to rescale
+    :param scaler:      The scaler used for scaling of dataframe
+    :return:            The rescaled dataframe
+    """
     x = dataframe.values
     rescaled = scaler.inverse_transform(x)
     rescaled_dataframe = pd.DataFrame(rescaled, columns=dataframe.columns, index=dataframe.index)
@@ -81,18 +127,41 @@ def rescale_dataframe(dataframe, scaler):
 
 
 def scale_inputs(x, y):
+    """
+    Downscales a dataframe x and a series y
+
+    :param x:   The dataframe to downscale
+    :param y:   The series to downscale
+    :return:    The downscaled dataframe, series and their used scalers for rescaling later on
+    """
     scaled_x, x_scaler = scale_dataframe(x)
     scaled_y, y_scaler = scale_series(y)
     return scaled_x, scaled_y, x_scaler, y_scaler
 
 
-def rescale_input(x, y, scaler):
-    rescaled_x = rescale_dataframe(x, scaler)
-    rescaled_y = rescale_series(y, scaler)
+def rescale_input(x, y, x_scaler, y_scaler):
+    """
+    Rescales a scaled dataframe x and series y using their specified scalers used for downscaling.
+
+    :param x:           The dataframe to rescale
+    :param y:           The series to rescale
+    :param x_scaler:    The scaler used for the dataframe
+    :param y_scaler:    The scaler used for the series
+    :return:            The rescaled dataframe and series
+    """
+    rescaled_x = rescale_dataframe(x, x_scaler)
+    rescaled_y = rescale_series(y, y_scaler)
     return rescaled_x, rescaled_y
 
 
 def estimate_knn(x, y):
+    """
+    Estimates the best parameters for k Nearest Neighbors given input samples and targets.
+    Estimated parameters are: n_neighbors and weights.
+
+    :param x:   The samples arraylike
+    :param y:   The targets arraylike
+    """
     knn = RandomizedSearchCV(neighbors.KNeighborsRegressor(),
                              param_distributions={
                                  'n_neighbors': range(2, 50 + 1, 2),
@@ -105,6 +174,13 @@ def estimate_knn(x, y):
 
 
 def estimate_decistion_tree(x, y):
+    """
+    Estimates the best parameters for Decision Tree given input samples and targets.
+    Estimated parameters are: max_depth.
+
+    :param x:   The samples arraylike
+    :param y:   The targets arraylike
+    """
     decision_tree = GridSearchCV(tree.DecisionTreeRegressor(),
                                  param_grid={
                                      'max_depth': range(3, 25 + 1, 2)
@@ -115,10 +191,17 @@ def estimate_decistion_tree(x, y):
 
 
 def estimate_random_forest(x, y):
+    """
+    Estimates the best parameters for Random Forest given input samples and targets.
+    Estimated parameters are: n_estimators and max_depth.
+
+    :param x:   The samples arraylike
+    :param y:   The targets arraylike
+    """
     random_forest = RandomizedSearchCV(ensemble.RandomForestRegressor(),
                                        param_distributions={
                                            'n_estimators': range(5, 125 + 1, 5),
-                                           # 'max_depth': [None, 5, 10, 20],
+                                           'max_depth': [None, 5, 10, 20],
                                        },
                                        n_iter=20,
                                        n_jobs=-1)
@@ -127,6 +210,13 @@ def estimate_random_forest(x, y):
 
 
 def estimate_linear_regression(x, y):
+    """
+    Estimates the best parameters for Linear Regression given input samples and targets.
+    Estimated parameters are: normalize.
+
+    :param x:   The samples arraylike
+    :param y:   The targets arraylike
+    """
     linear_regression = GridSearchCV(linear_model.LinearRegression(),
                                      param_grid={
                                          'normalize': [True, False]
@@ -136,6 +226,15 @@ def estimate_linear_regression(x, y):
 
 
 def estimate_gru(x, y, rate):
+    """
+    Estimates best parameters for GRU given input samples and targets.
+    Estimated parameters are: weights, dropout_rate, epochs, batch_size and learning rate.
+
+    :param x:       The samples dataframe
+    :param y:       The targets series
+    :param rate:    The samplingrate ('D' or 'H')
+    """
+
     x, y, x_scaler, y_scaler = scale_inputs(x, y)
     x = x.values.reshape(x.shape[0], x.shape[1], 1)
     y = y.values
@@ -158,6 +257,14 @@ def estimate_gru(x, y, rate):
 
 
 def parameter_estimation(x, y, rate):
+    """
+    Runs parameter estimation for all models for the given input
+
+    :param x:       The samples to use
+    :param y:       The targets to use
+    :param rate:    The samplingrate ('D' or 'H')
+    """
+
     # estimate_knn(x, y)
     # estimate_decistion_tree(x, y)
     # estimate_random_forest(x, y)
@@ -166,10 +273,25 @@ def parameter_estimation(x, y, rate):
 
 
 def rotate_series(series):
+    """
+    Rotates a series to the left by one.
+    The original first item becomes the last.
+
+    :param series:  The series to rotate
+    :return:        The rotated series
+    """
     return pd.concat([series[1:], pd.Series(series.iloc[0])])
 
 
 def model_testing(dataframe, pollutant, rate):
+    """
+    Tests all models on prediction using artificial features and also using the other pollutants directly
+
+    :param dataframe:   The dataframe to use
+    :param pollutant:   Which pollutant to predict
+    :param rate:        The rate of sampling ('D' or 'H')
+    """
+
     distance = 7 if rate == 'D' else 24  # distance for predictions, always 1 season (24 hrs or 7 days)
 
     series = dataframe[pollutant]
@@ -214,10 +336,10 @@ def dedifference_series(series, start_level, stepsize=1):
     :return:            The dedifferentiated series
     """
     dediff = list()
-    sum = start_level
+    summed = start_level
     for i in range(0, len(series), stepsize):
-        sum += series.iloc[i]
-        dediff.append(sum)
+        summed += series.iloc[i]
+        dediff.append(summed)
     out = pd.Series(dediff)
     out.index = series.index
     return out
@@ -232,7 +354,6 @@ def test_pollutants(dataframe, rate):
     """
     for pollutant in dataframe.columns:
         model_testing(dataframe, pollutant, rate)
-        model_testing()
 
 
 if __name__ == '__main__':
