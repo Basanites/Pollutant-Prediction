@@ -483,7 +483,7 @@ class LSTMPredictor(Predictor):
         pass
 
 
-def create_artificial_features(series, frequency='H', steps=7):
+def create_artificial_features(series, frequency='H', steps=7, weekdays=False, months=False, statistical=True):
     """
     Creates artificial features for a given series with Timestamp Index
 
@@ -492,25 +492,28 @@ def create_artificial_features(series, frequency='H', steps=7):
     :param steps:       the amount of steps to lag the series by
     :return:            the dataframe containing the artificial features for the input series
     """
-    interpolated = series.interpolate(method='time', frequency=frequency)
-    lagged = create_lagged_features(interpolated, frequency, steps)
-
+    #interpolated = series.interpolate(method='time', frequency=frequency)
+    lagged = create_lagged_features(series, frequency, steps)
     statistics = lagged
-    statistics['sum'] = lagged.sum(axis=1)
-    statistics['mean'] = lagged.mean(axis=1)
-    statistics['median'] = lagged.median(axis=1)
 
-    weekdays = pd.get_dummies(lagged.index.weekday_name)
-    weekdays = weekdays.applymap(lambda x: bool(x))
-    weekdays.index = lagged.index
+    if statistical:
+        statistics['sum'] = lagged.sum(axis=1)
+        statistics['mean'] = lagged.mean(axis=1)
+        statistics['median'] = lagged.median(axis=1)
 
-    months = pd.get_dummies(lagged.index.month.map(lambda x: calendar.month_abbr[x]))
-    months = months.applymap(lambda x: bool(x))
-    months.index = lagged.index
+    if weekdays:
+        weekdays_df = pd.get_dummies(lagged.index.weekday_name)
+        weekdays_df = weekdays_df.applymap(lambda x: bool(x))
+        weekdays_df.index = lagged.index
+        statistics = statistics.join(weekdays_df)
 
-    out = statistics.join(weekdays).join(months)
+    if months:
+        months_df = pd.get_dummies(lagged.index.month.map(lambda x: calendar.month_abbr[x]))
+        months_df = months_df.applymap(lambda x: bool(x))
+        months_df.index = lagged.index
+        statistics = statistics.join(months_df)
 
-    return out
+    return statistics
 
 
 def create_lagged_features(series, frequency='H', steps=7):
