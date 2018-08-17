@@ -1,7 +1,9 @@
 import glob
+import time
 
 import numpy as np
 import pandas as pd
+from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
@@ -252,6 +254,14 @@ def estimate_gru(x, y, rate):
                              n_jobs=-1)
     gru.fit(x, y)
     print(gru.best_params_, '\n', gru.best_score_)
+
+
+def estimate_arima(y, rate):
+    start = time.time()
+    model = auto_arima(y, start_p=1, start_q=1, max_p=4, max_q=4, error_action='ignore',
+                       suppress_warnings=True, stepwise=True)
+    runtime = time.time() - start
+    print(model.summary(), '\n', runtime)
 
 
 def parameter_estimation(x, y, rate):
