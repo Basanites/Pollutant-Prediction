@@ -7,10 +7,10 @@ from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from tensorflow.python.keras import Sequential, optimizers
 from tensorflow.python.keras.layers import GRU, Dropout, Dense
 from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
-from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from fbprophet import Prophet
 
 from timeseries.predictions import create_artificial_features
@@ -268,11 +268,21 @@ def estimate_arima(y, rate):
 
 def estimate_ets(y, rate):
     start = time.time()
-    model = ExponentialSmoothing(y)#, trend=trendtype, freq=rate, damped=damped,
-                                   #   seasonal=seasontype, seasonal_periods=seasonlength).fit(use_boxcox=box_cox)
+    model = ExponentialSmoothing(y)  # , trend=trendtype, freq=rate, damped=damped,
+    #   seasonal=seasontype, seasonal_periods=seasonlength).fit(use_boxcox=box_cox)
     # TODO run GridSearch
     runtime = time.time() - start
-    print('\n', runtime) #TODO find best params
+    print('\n', runtime)  # TODO find best params
+
+
+def estimate_prophet(x, y, rate):
+    start = time.time()
+    model = Prophet().fit(pd.DataFrame(data={
+        'ds': x,
+        'y': y
+    }))
+    runtime = time.time() - start
+    print('\n', runtime)
 
 
 def parameter_estimation(x, y, rate):
