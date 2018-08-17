@@ -10,6 +10,8 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.python.keras import Sequential, optimizers
 from tensorflow.python.keras.layers import GRU, Dropout, Dense
 from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from fbprophet import Prophet
 
 from timeseries.predictions import create_artificial_features
 
@@ -262,6 +264,15 @@ def estimate_arima(y, rate):
                        suppress_warnings=True, stepwise=True)
     runtime = time.time() - start
     print(model.summary(), '\n', runtime)
+
+
+def estimate_ets(y, rate):
+    start = time.time()
+    model = ExponentialSmoothing(y)#, trend=trendtype, freq=rate, damped=damped,
+                                   #   seasonal=seasontype, seasonal_periods=seasonlength).fit(use_boxcox=box_cox)
+    # TODO run GridSearch
+    runtime = time.time() - start
+    print('\n', runtime) #TODO find best params
 
 
 def parameter_estimation(x, y, rate):
