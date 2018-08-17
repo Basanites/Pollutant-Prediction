@@ -128,15 +128,18 @@ def estimate_random_forest(x, y):
 
 def estimate_linear_regression(x, y):
     linear_regression = GridSearchCV(linear_model.LinearRegression(),
-                                     param_grid={})
+                                     param_grid={
+                                         'normalize': [True, False]
+                                     })
     linear_regression.fit(x, y)
     print(linear_regression.best_params_, '\n', linear_regression.best_score_)
 
 
-def estimate_gru(x, y):
+def estimate_gru(x, y, rate):
     x, y, x_scaler, y_scaler = scale_inputs(x, y)
     x = x.values.reshape(x.shape[0], x.shape[1], 1)
     y = y.values
+    batch_size = [24, 24 * 7] if rate == 'H' else [7, 7 * 30]
 
     gru = RandomizedSearchCV(KerasRegressor(create_gru, verbose=0),
                              param_distributions={
@@ -144,7 +147,7 @@ def estimate_gru(x, y):
                                  'dropout_rate': np.linspace(0.1, 0.3, 3, endpoint=True),
                                  'input_shape': [(x.shape[1], x.shape[2])],
                                  'epochs': range(1, 10 + 1),
-                                 'batch_size': [24, 24 * 7],
+                                 'batch_size': batch_size,
                                  'learning_rate': np.linspace(0.001, 0.02, 10, endpoint=True)
                              },
                              verbose=2,
@@ -154,12 +157,12 @@ def estimate_gru(x, y):
     print(gru.best_params_, '\n', gru.best_score_)
 
 
-def parameter_estimation(x, y):
+def parameter_estimation(x, y, rate):
     # estimate_knn(x, y)
     # estimate_decistion_tree(x, y)
     # estimate_random_forest(x, y)
     # estimate_linear_regression(x, y)
-    estimate_gru(x, y)
+    estimate_gru(x, y, rate)
 
 
 def rotate_series(series):
@@ -177,9 +180,9 @@ def model_testing(dataframe, pollutant, rate):
     for i in range(1, distance + 1):
         rotated = rotate_series(rotated)[:-1]
 
-        parameter_estimation(artificial[:-i], rotated)
+        parameter_estimation(artificial[:-i], rotated, rate)
         if len(rest.columns.tolist()) > 1:
-            parameter_estimation(rest[:-i], rotated)
+            parameter_estimation(rest[:-i], rotated, rate)
 
 
 def test_pollutants(dataframe, rate):
