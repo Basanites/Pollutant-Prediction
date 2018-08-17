@@ -51,7 +51,6 @@ def create_gru(weights, input_shape, dropout_rate, learning_rate):
     :param learning_rate:   The learning rate of the optimizer
     :return:                The compiled model
     """
-
     optimizer = optimizers.RMSprop(lr=learning_rate)
 
     model = Sequential()
@@ -234,7 +233,6 @@ def estimate_gru(x, y, rate):
     :param y:       The targets series
     :param rate:    The samplingrate ('D' or 'H')
     """
-
     x, y, x_scaler, y_scaler = scale_inputs(x, y)
     x = x.values.reshape(x.shape[0], x.shape[1], 1)
     y = y.values
@@ -291,7 +289,6 @@ def model_testing(dataframe, pollutant, rate):
     :param pollutant:   Which pollutant to predict
     :param rate:        The rate of sampling ('D' or 'H')
     """
-
     distance = 7 if rate == 'D' else 24  # distance for predictions, always 1 season (24 hrs or 7 days)
 
     series = dataframe[pollutant]
@@ -343,6 +340,39 @@ def dedifference_series(series, start_level, stepsize=1):
     out = pd.Series(dediff)
     out.index = series.index
     return out
+
+
+def difference_dataframe(dataframe, stepsize=1):
+    """
+    Differentiates all columns in a dataframe.
+
+    :param dataframe:   The dataframe to differentiate
+    :param stepsize:    The stepsize to use for differentiation
+    :return:            The differentiated dataframe
+    """
+    diff = pd.DataFrame()
+    for i in range(stepsize, len(dataframe), stepsize):
+        diff = diff.join(dataframe.iloc[i] - dataframe.iloc[i - stepsize])
+    diff.index = dataframe.index[stepsize::stepsize]
+    return diff
+
+
+def dediffference_dataframe(dataframe, start_row, stepsize=1):
+    """
+    Inverses the differentiation of a dataframe using a given start_row.
+
+    :param dataframe:   The dataframe to dedifferentiate
+    :param start_row:   The starting row values to inverse differentiation from
+    :param stepsize:    The stepsize used for differentiation
+    :return:            The dedifferentiated dataframe
+    """
+    dediff = pd.DataFrame()
+    sums = start_row
+    for i in range(0, len(dataframe), stepsize):
+        sums += dataframe.iloc[i]
+        dediff.join(sums)
+    dediff.index = dataframe.index
+    return dediff
 
 
 def test_pollutants(dataframe, rate):
