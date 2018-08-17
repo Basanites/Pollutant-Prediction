@@ -143,7 +143,7 @@ def estimate_gru(x, y):
                                  'input_shape': [(x.shape[1], x.shape[2])]
                              },
                              n_iter=20,
-                             n_jobs=1)
+                             n_jobs=-1)
     gru.fit(x, y)
     print(gru.best_estimator_, '\n', gru.best_score_)
 
