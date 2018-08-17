@@ -185,9 +185,54 @@ def model_testing(dataframe, pollutant, rate):
             parameter_estimation(rest[:-i], rotated, rate)
 
 
+def difference_series(series, stepsize=1):
+    """
+    Differentiates a Pandas Series object.
+    The returned Series does not contain the first index of the input, because there is now sensible value for it.
+
+    :param series:      The series to differentiate
+    :param stepsize:    The stepsize to use for differentiation
+    :return:            The differentiated Series
+    """
+    diff = list()
+    for i in range(stepsize, len(series), stepsize):
+        diff.append(series.iloc[i] - series.iloc[i - stepsize])
+    out = pd.Series(diff)
+    out.index = series.index[stepsize::stepsize]
+    return out
+
+
+def dedifference_series(series, start_level, stepsize=1):
+    """
+    Inverse transforms a differentiated Pandas Series Object.
+    The start_level needs to be the original series' first index to get the original series.
+    The inversion works via summation from the start_level.
+
+    :param series:      The differentiated series
+    :param start_level: The start level to use for the inversion.
+    :param stepsize:    The stepsize used for differentiation
+    :return:            The dedifferentiated series
+    """
+    dediff = list()
+    sum = start_level
+    for i in range(0, len(series), stepsize):
+        sum += series.iloc[i]
+        dediff.append(sum)
+    out = pd.Series(dediff)
+    out.index = series.index
+    return out
+
+
 def test_pollutants(dataframe, rate):
+    """
+    Tests everything for all pollutants in a dataframe
+
+    :param dataframe:   The dataframe to test
+    :param rate:        The rate of the samples ('H' or 'D')
+    """
     for pollutant in dataframe.columns:
         model_testing(dataframe, pollutant, rate)
+        model_testing()
 
 
 if __name__ == '__main__':
