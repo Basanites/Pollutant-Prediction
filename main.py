@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn import neighbors, ensemble, tree, linear_model
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.python.keras import Sequential
+from tensorflow.python.keras import Sequential, optimizers
 from tensorflow.python.keras.layers import GRU, Dropout, Dense
 from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
 
@@ -28,12 +28,14 @@ def get_info(csv_path):
     return station_name, rate
 
 
-def create_gru(weights, input_shape, dropout_rate):
+def create_gru(weights, input_shape, dropout_rate, learning_rate):
+    optimizer = optimizers.RMSprop(lr=learning_rate)
+
     model = Sequential()
     model.add(GRU(weights, input_shape=input_shape))
     model.add(Dropout(dropout_rate))
     model.add(Dense(1))
-    model.compile('rmsprop', loss='mse')
+    model.compile(optimizer, loss='mse')
     return model
 
 
@@ -99,7 +101,7 @@ def estimate_knn(x, y):
                              n_iter=20,
                              n_jobs=-1)
     knn.fit(x, y)
-    print(knn.best_estimator_, '\n', knn.best_score_)
+    print(knn.best_params_, '\n', knn.best_score_)
 
 
 def estimate_decistion_tree(x, y):
@@ -109,7 +111,7 @@ def estimate_decistion_tree(x, y):
                                  },
                                  n_jobs=-1)
     decision_tree.fit(x, y)
-    print(decision_tree.best_estimator_, '\n', decision_tree.best_score_)
+    print(decision_tree.best_params_, '\n', decision_tree.best_score_)
 
 
 def estimate_random_forest(x, y):
@@ -121,14 +123,14 @@ def estimate_random_forest(x, y):
                                        n_iter=20,
                                        n_jobs=-1)
     random_forest.fit(x, y)
-    print(random_forest.best_estimator_, '\n', random_forest.best_score_)
+    print(random_forest.best_params_, '\n', random_forest.best_score_)
 
 
 def estimate_linear_regression(x, y):
     linear_regression = GridSearchCV(linear_model.LinearRegression(),
                                      param_grid={})
     linear_regression.fit(x, y)
-    print(linear_regression.best_estimator_, '\n', linear_regression.best_score_)
+    print(linear_regression.best_params_, '\n', linear_regression.best_score_)
 
 
 def estimate_gru(x, y):
@@ -136,16 +138,20 @@ def estimate_gru(x, y):
     x = x.values.reshape(x.shape[0], x.shape[1], 1)
     y = y.values
 
-    gru = RandomizedSearchCV(KerasRegressor(create_gru),
+    gru = RandomizedSearchCV(KerasRegressor(create_gru, verbose=0),
                              param_distributions={
-                                 'weights': range(1, 25 + 1, 2),
-                                 'dropout_rate': np.linspace(0.1, 0.9, 20, endpoint=True),
-                                 'input_shape': [(x.shape[1], x.shape[2])]
+                                 'weights': np.linspace(1, 100, 20, endpoint=True, dtype=int),
+                                 'dropout_rate': np.linspace(0.1, 0.3, 3, endpoint=True),
+                                 'input_shape': [(x.shape[1], x.shape[2])],
+                                 'epochs': range(1, 10 + 1),
+                                 'batch_size': [24, 24 * 7],
+                                 'learning_rate': np.linspace(0.001, 0.02, 10, endpoint=True)
                              },
+                             verbose=2,
                              n_iter=20,
                              n_jobs=-1)
     gru.fit(x, y)
-    print(gru.best_estimator_, '\n', gru.best_score_)
+    print(gru.best_params_, '\n', gru.best_score_)
 
 
 def parameter_estimation(x, y):
