@@ -199,7 +199,7 @@ def estimate_decision_tree(x, y):
                                  n_jobs=-1)
     decision_tree.fit(x, y)
     logger.log(f'Found best Decision Tree model with params {decision_tree.best_params_}'
-        f' and score {decision_tree.best_score_}', 3)
+               f' and score {decision_tree.best_score_}', 3)
 
 
 def estimate_random_forest(x, y):
@@ -221,7 +221,7 @@ def estimate_random_forest(x, y):
                                        n_jobs=-1)
     random_forest.fit(x, y)
     logger.log(f'Found best Random Forest model with params {random_forest.best_params_}'
-        f' and score {random_forest.best_score_}', 3)
+               f' and score {random_forest.best_score_}', 3)
 
 
 def estimate_linear_regression(x, y):
@@ -241,7 +241,7 @@ def estimate_linear_regression(x, y):
                                      n_jobs=-1)
     linear_regression.fit(x, y)
     logger.log(f'Found best Linear Regression model with params {linear_regression.best_params_}'
-        f' and score {linear_regression.best_score_}', 3)
+               f' and score {linear_regression.best_score_}', 3)
 
 
 def estimate_gru(x, y, rate):
@@ -285,9 +285,11 @@ def estimate_arima(y, distance):
     logger.log('Finding best ARIMA parameters', 3)
     start = time.time()
     model = auto_arima(y, start_p=1, start_q=1, max_p=4, max_q=4, error_action='ignore',
-                       suppress_warnings=True, stepwise=True, out_of_sample_size=distance)
+                       suppress_warnings=True, stepwise=True, out_of_sample_size=distance, scoring='mse')
+    prediction = model.predict(distance)
+    mse = mean_squared_error(y[-distance:], prediction)
     runtime = time.time() - start
-    logger.log(f'Found best model {model.summary()} in {runtime}', 3)
+    logger.log(f'Found best ARIMA model with mse {mse} in {runtime}', 3)
 
 
 def estimate_ets(y, distance, rate):
@@ -307,7 +309,6 @@ def estimate_ets(y, distance, rate):
     has_negatives = y.min() <= 0
     best_mse = 1000
     best_params = {}
-    best_fit_time = 10000
 
     trend = 'additive'  # because of nan errors otherwise
     for season in add_mul:
@@ -315,12 +316,10 @@ def estimate_ets(y, distance, rate):
             for box_cox in t_f:
                 # only use box_cox if no negative values in input
                 if not (has_negatives and box_cox is True):
-                    fit_start = time.time()
                     fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
                                                freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
                     prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
                     mse = mean_squared_error(y[-distance:], prediction)
-                    fit_time = time.time() - fit_start
 
                     if mse < best_mse:
                         best_params = fit.params
@@ -328,7 +327,6 @@ def estimate_ets(y, distance, rate):
                         best_params['seasonal'] = season
                         best_params['damped'] = damped
                         best_mse = mse
-                        best_fit_time = fit_time
 
     runtime = time.time() - start
     logger.log(f'Found best ETS model with mse {best_mse} and params {best_params} in {runtime}', 3)
