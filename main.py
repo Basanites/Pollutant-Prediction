@@ -1,5 +1,6 @@
 import glob
 import time
+import sys
 
 import numpy as np
 import pandas as pd
@@ -490,5 +491,9 @@ if __name__ == '__main__':
 
         if len(df > 8760):
             df = df[:8760]
+
+        if not sys.gettrace() is None:
+            print('Running in debugger, df is cut to 500 elements')
+            df = df[:500]
 
         test_pollutants(df, steprate)
