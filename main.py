@@ -263,7 +263,6 @@ def estimate_gru(x, y, rate):
                                  'batch_size': batch_size,
                                  'learning_rate': np.linspace(0.001, 0.02, 10, endpoint=True)
                              },
-                             verbose=2,
                              n_iter=20,
                              n_jobs=-1)
     gru.fit(x, y)
