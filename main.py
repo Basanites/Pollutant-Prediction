@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
+from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
@@ -32,14 +33,14 @@ def resample_dataframe(dataframe, rate='H'):
     return dataframe
 
 
-def get_info(csv_path):
+def get_info(csv_path, directory):
     """
     Gets station name and rate from a csv path string
 
     :param csv_path:    The path string
     :return:            The station name and rate
     """
-    info = csv_path.replace(f'{datadir}/', '').replace('.csv', '').split('-')
+    info = csv_path.replace(f'{directory}/', '').replace('.csv', '').split('-')
     station_name = info[0]
     rate = {'day': 'D', 'hour': 'H'}[info[-1]]
     return station_name, rate
@@ -424,7 +425,7 @@ if __name__ == '__main__':
     files = glob.glob(datadir + '/*')
 
     for csv in files:
-        station, steprate = get_info(csv)
+        station, steprate = get_info(csv, datadir)
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
             columns=['AirQualityStationEoICode', 'AveragingTime'])
         df = resample_dataframe(df, steprate)

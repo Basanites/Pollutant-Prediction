@@ -1,6 +1,6 @@
 import pandas as pd
 
-from main import resample_dataframe
+from main import resample_dataframe, get_info
 
 
 def get_daily():
@@ -64,3 +64,19 @@ class TestResampleDataframe:
         assert len(resampled.columns) is 3
         assert '2013-01-01 01:00:00' in resampled.index
         assert '2013-01-01 02:00:00' in resampled.index
+
+class TestGetInfo:
+    def test_daily(self):
+        string = 'station-ignored-day.csv'
+        station, rate = get_info(string, '')
+
+        assert station == 'station'
+        assert rate == 'D'
+
+    def test_hourly(self):
+        string = 'station-ignored-hour.csv'
+        station, rate = get_info(string, '')
+
+        assert station == 'station'
+        assert rate == 'H'
+
