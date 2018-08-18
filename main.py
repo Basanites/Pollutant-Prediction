@@ -282,7 +282,7 @@ def estimate_arima(y, distance):
     model = auto_arima(y, start_p=1, start_q=1, max_p=4, max_q=4, error_action='ignore',
                        suppress_warnings=True, stepwise=True, out_of_sample_size=distance)
     runtime = time.time() - start
-    log(f'Found best model {model.summary} in {runtime}', 3)
+    log(f'Found best model {model.summary()} in {runtime}', 3)
 
 
 def estimate_ets(y, distance, rate):
@@ -302,32 +302,36 @@ def estimate_ets(y, distance, rate):
     has_negatives = y.min() <= 0
     best_mse = 1000
     best_params = {}
+    best_fit_time = 10000
 
-    for trend in add_mul:
-        for season in add_mul:
-            for damped in t_f:
-                for box_cox in t_f:
-                    # only use box_cox if no negative values in input
-                    if not (has_negatives or box_cox is False):
-                        fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
-                                                   freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
-                        prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
-                        mse = mean_squared_error(y[-distance:], prediction)
+    trend = 'additive'  # because of nan errors otherwise
+    for season in add_mul:
+        for damped in t_f:
+            for box_cox in t_f:
+                # only use box_cox if no negative values in input
+                if not (has_negatives or box_cox is False):
+                    fit_start = time.time()
+                    fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
+                                               freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
+                    prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
+                    mse = mean_squared_error(y[-distance:], prediction)
+                    fit_time = time.time() - fit_start
 
-                        if mse < best_mse:
-                            best_params = {
-                                'trend': trend,
-                                'seasonal': season,
-                                'damped': damped,
-                                'freq': rate,
-                                'seasonal_periods': distance,
-                                'use_boxcox': box_cox
-                                # 'smoothing_level': fit.smoothing_level,
-                                # 'smoothing_slope': fit.smoothing_slope,
-                                # 'smoothing_seasonal': fit.smoothing_seasonal,
-                                # 'damping_slope': fit.damping_slope
-                            }
-                            best_mse = mse
+                    if mse < best_mse:
+                        best_params = {
+                            'trend': trend,
+                            'seasonal': season,
+                            'damped': damped,
+                            'freq': rate,
+                            'seasonal_periods': distance,
+                            'use_boxcox': box_cox,
+                            # 'smoothing_level': fit.smoothing_level,
+                            # 'smoothing_slope': fit.smoothing_slope,
+                            # 'smoothing_seasonal': fit.smoothing_seasonal,
+                            # 'damping_slope': fit.damping_slope
+                        }
+                        best_mse = mse
+                        best_fit_time = fit_time
 
     runtime = time.time() - start
     log(f'Found best ETS model with mse {best_mse} and params {best_params} in {runtime}', 3)
@@ -347,7 +351,8 @@ def estimate_prophet(y, distance, rate):
         'ds': y.index[:-distance],
         'y': y[:-distance]
     }))
-    mse = mean_squared_error(y[-distance:], model.predict(model.make_future_dataframe(distance, rate)))
+    mse = mean_squared_error(y[-distance:],
+                             model.predict(model.make_future_dataframe(distance, rate))['yhat'][-distance:])
     runtime = time.time() - start
     log(f'Found best Prophet model with mse {mse} in {runtime}', 3)
 
