@@ -6,6 +6,7 @@ import pandas as pd
 from fbprophet import Prophet
 from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
+from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
@@ -37,6 +38,7 @@ def get_info(csv_path, directory):
     Gets station name and rate from a csv path string
 
     :param csv_path:    The path string
+    :param directory:   The directory of the csv
     :return:            The station name and rate
     """
     info = csv_path.replace(f'{directory}/', '').replace('.csv', '').split('-')
@@ -176,7 +178,7 @@ def estimate_knn(x, y):
     print(knn.best_params_, '\n', knn.best_score_)
 
 
-def estimate_decistion_tree(x, y):
+def estimate_decision_tree(x, y):
     """
     Estimates the best parameters for Decision Tree given input samples and targets.
     Estimated parameters are: max_depth.
@@ -258,31 +260,32 @@ def estimate_gru(x, y, rate):
     print(gru.best_params_, '\n', gru.best_score_)
 
 
-def estimate_arima(y, rate):
+def estimate_arima(y, distance):
     start = time.time()
     model = auto_arima(y, start_p=1, start_q=1, max_p=4, max_q=4, error_action='ignore',
-                       suppress_warnings=True, stepwise=True)
+                       suppress_warnings=True, stepwise=True, out_of_sample_size=distance)
     runtime = time.time() - start
-    print(model.summary(), '\n', runtime)
+    print(model.summary(), '\n', model.oob, '\n', runtime)
 
 
-def estimate_ets(y, rate):
+def estimate_ets(y, distance):
     start = time.time()
     model = ExponentialSmoothing(y)  # , trend=trendtype, freq=rate, damped=damped,
     #   seasonal=seasontype, seasonal_periods=seasonlength).fit(use_boxcox=box_cox)
-    # TODO run GridSearch
+    # TODO GridSearch ETS params
     runtime = time.time() - start
     print('\n', runtime)  # TODO find best params
 
 
-def estimate_prophet(x, y, rate):
+def estimate_prophet(y, distance, rate):
     start = time.time()
     model = Prophet().fit(pd.DataFrame(data={
-        'ds': x,
-        'y': y
+        'ds': y.index[:-distance],
+        'y': y[:-distance]
     }))
+    mse = mean_squared_error(y[-distance:], model.predict(model.make_future_dataframe(distance, rate)))
     runtime = time.time() - start
-    print('\n', runtime)
+    print(mse, '\n', runtime)
 
 
 def direct_parameter_estimation(x, y, rate):
@@ -293,14 +296,14 @@ def direct_parameter_estimation(x, y, rate):
     :param y:       The targets to use
     :param rate:    The samplingrate ('D' or 'H')
     """
-    # estimate_knn(x, y)
-    # estimate_decision_tree(x, y)
-    # estimate_random_forest(x, y)
-    # estimate_linear_regression(x, y)
+    estimate_knn(x, y)
+    estimate_decision_tree(x, y)
+    estimate_random_forest(x, y)
+    estimate_linear_regression(x, y)
     estimate_gru(x, y, rate)
 
 
-def timebased_parameter_estimation(x, y, rate):
+def timebased_parameter_estimation(y, distance, rate):
     """
     Runs parameter estimation for all statistical models for the given input
 
@@ -308,10 +311,10 @@ def timebased_parameter_estimation(x, y, rate):
     :param y:       The targets to use
     :param rate:    The samplingrate ('D' or 'H')
     """
-    # estimate_ets(x, y, rate)
-    # estimate_arima(x, y, rate)
-    # estimate_prophet(x, y, rate)
-    pass
+    estimate_ets(y, distance)
+    estimate_arima(y, distance)
+    estimate_prophet(y, distance, rate)
+
 
 def rotate_series(series):
     """
@@ -338,17 +341,17 @@ def model_testing(dataframe, pollutant, rate):
     rest = dataframe.drop(columns=[pollutant])[distance:]
     artificial = create_artificial_features(series, rate, steps=distance)[distance:]
 
-    rotated = rotate_series(series[distance:])[:-1]
-    timebased_parameter_estimation(artificial[:-1], rotated, rate)
-    if len(rest.columns.tolist() > 1):
-        timebased_parameter_estimation(rest[:-1], rotated, rate)
-    
+    timebased_parameter_estimation(series, distance, rate)
+
+    rotated = series[distance:]
     for i in range(1, distance + 1):
+        rotated = rotate_series(rotated)[:-1]
+
         direct_parameter_estimation(artificial[:-i], rotated, rate)
         if len(rest.columns.tolist()) > 1:
             direct_parameter_estimation(rest[:-i], rotated, rate)
 
-        rotated = rotate_series(rotated)[:-1]
+
 
 
 def difference_series(series, stepsize=1):
