@@ -159,16 +159,6 @@ def rescale_input(x, y, x_scaler, y_scaler):
     return rescaled_x, rescaled_y
 
 
-def get_ets_params(ets_fit):
-    params = {
-        'trend': ets_fit.trend,
-        'seasonal': ets_fit.seasonal,
-        'damped': ets_fit.damped,
-        'seasonal_periods': ets_fit.seasonal_periods
-    }
-    return params
-
-
 def estimate_knn(x, y):
     """
     Estimates the best parameters for k Nearest Neighbors given input samples and targets.
@@ -271,6 +261,12 @@ def estimate_gru(x, y, rate):
 
 
 def estimate_arima(y, distance):
+    """
+    Estimates best parameters for ARIMA model and input series y.
+
+    :param y:           The series to predict further
+    :param distance:    The amount of steps to predict
+    """
     start = time.time()
     model = auto_arima(y, start_p=1, start_q=1, max_p=4, max_q=4, error_action='ignore',
                        suppress_warnings=True, stepwise=True, out_of_sample_size=distance)
@@ -279,6 +275,14 @@ def estimate_arima(y, distance):
 
 
 def estimate_ets(y, distance, rate):
+    """
+    Estimates the best parameters for ETS prediction of series y
+
+    :param y:           The series to predict
+    :param distance:    The amount of steps to predict
+    :param rate:        The rate of samling for the series ('D' or 'H')
+    :return:
+    """
     start = time.time()
 
     add_mul = ['additive', 'multiplicative']
@@ -291,21 +295,40 @@ def estimate_ets(y, distance, rate):
         for season in add_mul:
             for damped in t_f:
                 for box_cox in t_f:
-                    if not (has_negatives or box_cox == False):
+                    # only use box_cox if no negative values in input
+                    if not (has_negatives or box_cox is False):
                         fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
-                                                     freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
-                        prediction = fit.predict(start=len(y[:-distance] - 1, end=len(y) -1))
+                                                   freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
+                        prediction = fit.predict(start=len(y[:-distance] - 1, end=len(y) - 1))
                         mse = mean_squared_error(y[-distance:], prediction)
 
                         if mse < best_mse:
-                            best_params = get_ets_params(fit)
+                            best_params = {
+                                'trend': trend,
+                                'seasonal': season,
+                                'damped': damped,
+                                'freq': rate,
+                                'seasonal_periods': distance,
+                                'use_boxcox': box_cox,
+                                'smoothing_level': fit.smoothing_level,
+                                'smoothing_slope': fit.smoothing_slope,
+                                'smoothing_seasonal': fit.smoothing_seasonal,
+                                'damping_slope': fit.damping_slope
+                            }
                             best_mse = mse
 
     runtime = time.time() - start
-    print(best_params, '\n', best_mse,'\n', runtime)
+    print(best_params, '\n', best_mse, '\n', runtime)
 
 
 def estimate_prophet(y, distance, rate):
+    """
+    Estimate the best parameters for prophet prediction
+
+    :param y:           The series to predict for
+    :param distance:    The amount of steps to predict
+    :param rate:        The rate of sampling ('D' or 'H')
+    """
     start = time.time()
     model = Prophet().fit(pd.DataFrame(data={
         'ds': y.index[:-distance],
@@ -335,9 +358,9 @@ def timebased_parameter_estimation(y, distance, rate):
     """
     Runs parameter estimation for all statistical models for the given input
 
-    :param x:       The samples to use
-    :param y:       The targets to use
-    :param rate:    The samplingrate ('D' or 'H')
+    :param y:           The targets to use
+    :param distance:    The amount of timesteps to predict
+    :param rate:        The samplingrate ('D' or 'H')
     """
     estimate_ets(y, distance, rate)
     estimate_arima(y, distance)
@@ -469,6 +492,3 @@ if __name__ == '__main__':
             df = df[:8760]
 
         test_pollutants(df, steprate)
-
-        # stats_gru = RandomizedSearchCV()
-        # stats_lstm = RandomizedSearchCV()
