@@ -1,4 +1,5 @@
 import glob
+import os
 import sys
 import time
 
@@ -181,6 +182,8 @@ def estimate_knn(x, y):
     knn.fit(x, y)
     logger.log(f'Found best KNN model with params {knn.best_params_} and score {knn.best_score_}', 3)
 
+    return knn.best_params_, knn.best_score_
+
 
 def estimate_decision_tree(x, y):
     """
@@ -200,6 +203,8 @@ def estimate_decision_tree(x, y):
     decision_tree.fit(x, y)
     logger.log(f'Found best Decision Tree model with params {decision_tree.best_params_}'
                f' and score {decision_tree.best_score_}', 3)
+
+    return decision_tree.best_params_, decision_tree.best_score_
 
 
 def estimate_random_forest(x, y):
@@ -223,6 +228,8 @@ def estimate_random_forest(x, y):
     logger.log(f'Found best Random Forest model with params {random_forest.best_params_}'
                f' and score {random_forest.best_score_}', 3)
 
+    return random_forest.best_params_, random_forest.best_score_
+
 
 def estimate_linear_regression(x, y):
     """
@@ -242,6 +249,8 @@ def estimate_linear_regression(x, y):
     linear_regression.fit(x, y)
     logger.log(f'Found best Linear Regression model with params {linear_regression.best_params_}'
                f' and score {linear_regression.best_score_}', 3)
+
+    return linear_regression.best_params_, linear_regression.best_score_
 
 
 def estimate_gru(x, y, rate):
@@ -274,6 +283,8 @@ def estimate_gru(x, y, rate):
     gru.fit(x, y)
     logger.log(f'Found best GRU model with params {gru.best_params} and score {gru.best_score_}', 3)
 
+    return gru.best_params_, gru.best_score_
+
 
 def estimate_arima(y, distance):
     """
@@ -290,6 +301,8 @@ def estimate_arima(y, distance):
     mse = mean_squared_error(y[-distance:], prediction)
     runtime = time.time() - start
     logger.log(f'Found best ARIMA model with mse {mse} in {runtime}', 3)
+
+    return model.get_params(), mse
 
 
 def estimate_ets(y, distance, rate):
@@ -331,6 +344,8 @@ def estimate_ets(y, distance, rate):
     runtime = time.time() - start
     logger.log(f'Found best ETS model with mse {best_mse} and params {best_params} in {runtime}', 3)
 
+    return best_params, best_mse
+
 
 def estimate_prophet(y, distance, rate):
     """
@@ -351,6 +366,8 @@ def estimate_prophet(y, distance, rate):
     runtime = time.time() - start
     logger.log(f'Found best Prophet model with mse {mse} in {runtime}', 3)
 
+    return mse
+
 
 def direct_parameter_estimation(x, y, rate):
     """
@@ -360,11 +377,16 @@ def direct_parameter_estimation(x, y, rate):
     :param y:       The targets to use
     :param rate:    The samplingrate ('D' or 'H')
     """
-    estimate_knn(x, y)
-    estimate_decision_tree(x, y)
-    estimate_random_forest(x, y)
-    estimate_linear_regression(x, y)
-    estimate_gru(x, y, rate)
+    params = dict()
+    scores = dict()
+
+    params['knn'], scores['knn'] = estimate_knn(x, y)
+    params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
+    params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
+    params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
+    params['gru'], scores['gru'] = estimate_gru(x, y, rate)
+
+    return params, scores
 
 
 def timebased_parameter_estimation(y, distance, rate):
@@ -375,9 +397,15 @@ def timebased_parameter_estimation(y, distance, rate):
     :param distance:    The amount of timesteps to predict
     :param rate:        The samplingrate ('D' or 'H')
     """
-    estimate_ets(y, distance, rate)
-    estimate_arima(y, distance)
-    estimate_prophet(y, distance, rate)
+    params = dict()
+    scores = dict()
+
+    #params['ets'], scores['ets'] = estimate_ets(y, distance, rate)
+    params['arima'], scores['arima'] = estimate_arima(y, distance)
+    scores['prophet'] = estimate_prophet(y, distance, rate)
+    params['prophet'] = dict()
+
+    return params, scores
 
 
 def rotate_series(series):
@@ -391,12 +419,37 @@ def rotate_series(series):
     return pd.concat([series[1:], pd.Series(series.iloc[0])])
 
 
-def model_testing(dataframe, pollutant, rate):
+def save_results(station, pollutant, params, scores, distance, direct=True, artificial=True):
+    savepath = f'./results/{station}-{pollutant}-{distance}-direct={direct}'
+    if direct:
+        savepath += f'-artificial={artificial}'
+    savepath += '.csv'
+
+    if not os.path.isfile(savepath):
+        open(savepath, 'x')
+
+    dataframe = pd.DataFrame()
+    for model, param in params.items():
+        for k, v in param.items():
+            if type(v) is tuple:
+                param[k] = str(v)
+
+        currentframe = pd.DataFrame().from_records([param.values()], columns=param.keys())
+        currentframe['score'] = scores[model]
+        currentframe['model'] = model
+        dataframe = pd.concat([dataframe, currentframe])
+
+    dataframe = dataframe.reset_index()
+    dataframe.to_csv(savepath)
+
+
+def model_testing(dataframe, pollutant, station, rate):
     """
     Tests all models on prediction using artificial features and also using the other pollutants directly
 
     :param dataframe:   The dataframe to use
     :param pollutant:   Which pollutant to predict
+    :param station:     The station to test for
     :param rate:        The rate of sampling ('D' or 'H')
     """
     distance = 7 if rate == 'D' else 24  # distance for predictions, always 1 season (24 hrs or 7 days)
@@ -406,17 +459,20 @@ def model_testing(dataframe, pollutant, rate):
     artificial = create_artificial_features(series, rate, steps=distance)[distance:]
 
     logger.log('Running tests for timebased models', 2)
-    timebased_parameter_estimation(series, distance, rate)
+    timebased_params, timebased_scores = timebased_parameter_estimation(series, distance, rate)
+    save_results(station, pollutant, timebased_params, timebased_scores, distance, direct=False)
 
     rotated = series[distance:]
     for i in range(1, distance + 1):
         rotated = rotate_series(rotated)[:-1]
 
         logger.log(f'Running tests for direct models on artificial set with distance {i}{rate}', 2)
-        direct_parameter_estimation(artificial[:-i], rotated, rate)
+        artificial_params, artificial_scores = direct_parameter_estimation(artificial[:-i], rotated, rate)
+        save_results(station, pollutant, artificial_params, artificial_scores, i)
         if len(rest.columns.tolist()) > 1:
             logger.log(f'Running tests for direct models on direct set with distance {i}{rate}', 2)
-            direct_parameter_estimation(rest[:-i], rotated, rate)
+            direct_params, direct_scores = direct_parameter_estimation(rest[:-i], rotated, rate)
+            save_results(station, pollutant, direct_params, direct_scores, i, artificial=False)
 
 
 def difference_series(series, stepsize=1):
@@ -481,7 +537,7 @@ def dediffference_dataframe(dataframe, start_row, stepsize=1):
     return dediff
 
 
-def test_pollutants(dataframe, rate):
+def test_pollutants(dataframe, station, rate):
     """
     Tests everything for all pollutants in a dataframe
 
@@ -490,10 +546,10 @@ def test_pollutants(dataframe, rate):
     """
     for pollutant in dataframe.columns:
         logger.log(f'Running tests for {pollutant}', 1)
-        model_testing(dataframe, pollutant, rate)
+        model_testing(dataframe, pollutant, station, rate)
 
         logger.log(f'Running tests for differenced {pollutant}', 1)
-        model_testing(difference_dataframe(dataframe), pollutant, rate)
+        model_testing(difference_dataframe(dataframe), pollutant, station, rate)
 
 
 if __name__ == '__main__':
@@ -502,9 +558,13 @@ if __name__ == '__main__':
     modeldir = './models'
     statsfile = './stats.csv'
     files = glob.glob(datadir + '/*')
+    debug_len = 100
     debug = not sys.gettrace() is None
     if debug:
-        logger.log('Running in debugger, dataframes will be cut to 500 elements')
+        logger.log(f'Running in debugger, dataframes will be cut to {debug_len} elements')
+
+    if not os.path.exists('./results'):
+        os.makedirs('./results')
 
     for csv in files:
         logger.log(f'Running tests for {csv}')
@@ -517,6 +577,6 @@ if __name__ == '__main__':
             df = df[:8760]
 
         if debug:
-            df = df[:500]
+            df = df[:debug_len]
 
-        test_pollutants(df, steprate)
+        test_pollutants(df, station, steprate)
