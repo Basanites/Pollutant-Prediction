@@ -1,6 +1,7 @@
+import math
 import pandas as pd
 
-from main import resample_dataframe, get_info
+from main import resample_dataframe, get_info, scale_series, rescale_series
 
 
 def get_daily():
@@ -65,6 +66,7 @@ class TestResampleDataframe:
         assert '2013-01-01 01:00:00' in resampled.index
         assert '2013-01-01 02:00:00' in resampled.index
 
+
 class TestGetInfo:
     def test_daily(self):
         string = 'station-ignored-day.csv'
@@ -80,3 +82,24 @@ class TestGetInfo:
         assert station == 'station'
         assert rate == 'H'
 
+
+class TestScalingSeries:
+    def test_scale(self):
+        series = get_daily()['PM10'].astype(float)
+        scaled, scaler = scale_series(series)
+
+        assert math.isclose(scaled.max(), 1, rel_tol=0.001)
+        assert math.isclose(scaled.min(), -1, rel_tol=0.001)
+        assert series.max() is not 1
+        assert series.min() is not -1
+        assert len(series) is len(scaled)
+        assert series.index is scaled.index
+
+    def test_rescales(self):
+        series = get_daily()['PM10'].astype(float)
+        scaled, scaler = scale_series(series)
+        rescaled = rescale_series(scaled, scaler)
+
+        assert rescaled.iloc[0] == series.iloc[0]
+        assert len(series) is len(rescaled)
+        assert series.index is rescaled.index
