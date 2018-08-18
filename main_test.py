@@ -2,7 +2,8 @@ import math
 
 import pandas as pd
 
-from main import resample_dataframe, get_info, scale_series, rescale_series, scale_dataframe, rescale_dataframe
+from main import resample_dataframe, get_info, scale_series, rescale_series, scale_dataframe, rescale_dataframe, \
+    difference_series, dedifference_series
 
 
 def get_daily():
@@ -128,3 +129,21 @@ class TestScalingDataframe:
         assert rescaled.iloc[0].equals(df.iloc[0].astype(float))
         assert len(df) is len(rescaled)
         assert df.index is rescaled.index
+
+
+class TestSeriesDifferencing:
+    def test_differencing(self):
+        series = get_daily()['PM10']
+        differenced = difference_series(series)
+
+        assert differenced.index.equals(series.index[1:])
+        assert differenced.iloc[0] == series.iloc[1] - series.iloc[0]
+
+    def test_dedifferencing(self):
+        series = get_daily()['PM10']
+        differenced = difference_series(series)
+        dedifferenced = dedifference_series(differenced, series.iloc[0])
+
+        assert dedifferenced.index is differenced.index
+        assert dedifferenced.index.equals(series.index[1:])
+        assert dedifferenced.iloc[0].astype(float) == series.iloc[1].astype(float)
