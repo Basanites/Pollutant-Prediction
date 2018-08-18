@@ -309,7 +309,7 @@ def estimate_ets(y, distance, rate):
         for damped in t_f:
             for box_cox in t_f:
                 # only use box_cox if no negative values in input
-                if not (has_negatives or box_cox is False):
+                if not (has_negatives and box_cox is True):
                     fit_start = time.time()
                     fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
                                                freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
