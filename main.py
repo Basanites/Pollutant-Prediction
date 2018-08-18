@@ -311,7 +311,7 @@ def estimate_ets(y, distance, rate):
                     if not (has_negatives or box_cox is False):
                         fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
                                                    freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
-                        prediction = fit.predict(start=len(y[:-distance]) - 1, end=len(y) - 1)
+                        prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
                         mse = mean_squared_error(y[-distance:], prediction)
 
                         if mse < best_mse:
@@ -321,11 +321,11 @@ def estimate_ets(y, distance, rate):
                                 'damped': damped,
                                 'freq': rate,
                                 'seasonal_periods': distance,
-                                'use_boxcox': box_cox,
-                                'smoothing_level': fit.smoothing_level,
-                                'smoothing_slope': fit.smoothing_slope,
-                                'smoothing_seasonal': fit.smoothing_seasonal,
-                                'damping_slope': fit.damping_slope
+                                'use_boxcox': box_cox
+                                # 'smoothing_level': fit.smoothing_level,
+                                # 'smoothing_slope': fit.smoothing_slope,
+                                # 'smoothing_seasonal': fit.smoothing_seasonal,
+                                # 'damping_slope': fit.damping_slope
                             }
                             best_mse = mse
 
