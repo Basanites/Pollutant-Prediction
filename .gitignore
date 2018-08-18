@@ -1,3 +1,5 @@
 .ipynb_checkpoints/
 .idea/
+.pyramid-cache/
+.pytest_cache/
 __pycache__/
