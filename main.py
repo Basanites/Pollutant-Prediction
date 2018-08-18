@@ -3,16 +3,15 @@ import time
 
 import numpy as np
 import pandas as pd
+from fbprophet import Prophet
 from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
-from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 from tensorflow.python.keras import Sequential, optimizers
 from tensorflow.python.keras.layers import GRU, Dropout, Dense
 from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
-from fbprophet import Prophet
 
 from timeseries.predictions import create_artificial_features
 
@@ -286,21 +285,33 @@ def estimate_prophet(x, y, rate):
     print('\n', runtime)
 
 
-def parameter_estimation(x, y, rate):
+def direct_parameter_estimation(x, y, rate):
     """
-    Runs parameter estimation for all models for the given input
+    Runs parameter estimation for all machine learning models for the given input
 
     :param x:       The samples to use
     :param y:       The targets to use
     :param rate:    The samplingrate ('D' or 'H')
     """
-
     # estimate_knn(x, y)
-    # estimate_decistion_tree(x, y)
+    # estimate_decision_tree(x, y)
     # estimate_random_forest(x, y)
     # estimate_linear_regression(x, y)
     estimate_gru(x, y, rate)
 
+
+def timebased_parameter_estimation(x, y, rate):
+    """
+    Runs parameter estimation for all statistical models for the given input
+
+    :param x:       The samples to use
+    :param y:       The targets to use
+    :param rate:    The samplingrate ('D' or 'H')
+    """
+    # estimate_ets(x, y, rate)
+    # estimate_arima(x, y, rate)
+    # estimate_prophet(x, y, rate)
+    pass
 
 def rotate_series(series):
     """
@@ -327,13 +338,17 @@ def model_testing(dataframe, pollutant, rate):
     rest = dataframe.drop(columns=[pollutant])[distance:]
     artificial = create_artificial_features(series, rate, steps=distance)[distance:]
 
-    rotated = series[distance:]
+    rotated = rotate_series(series[distance:])[:-1]
+    timebased_parameter_estimation(artificial[:-1], rotated, rate)
+    if len(rest.columns.tolist() > 1):
+        timebased_parameter_estimation(rest[:-1], rotated, rate)
+    
     for i in range(1, distance + 1):
-        rotated = rotate_series(rotated)[:-1]
-
-        parameter_estimation(artificial[:-i], rotated, rate)
+        direct_parameter_estimation(artificial[:-i], rotated, rate)
         if len(rest.columns.tolist()) > 1:
-            parameter_estimation(rest[:-i], rotated, rate)
+            direct_parameter_estimation(rest[:-i], rotated, rate)
+
+        rotated = rotate_series(rotated)[:-1]
 
 
 def difference_series(series, stepsize=1):
