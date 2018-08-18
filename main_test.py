@@ -11,6 +11,7 @@ def get_daily():
     })
 
     df = df.set_index('Timestamp')
+    df.index = pd.to_datetime(df.index)
     return df
 
 
@@ -22,6 +23,7 @@ def get_hourly():
         'SO2': [27.458, 10.514, 4.948]
     })
     df = df.set_index('Timestamp')
+    df.index = pd.to_datetime(df.index)
     return df
 
 
@@ -53,7 +55,6 @@ class TestResampleDataframe:
         assert '2013-01-12' in resampled.index
         assert '2013-01-13' in resampled.index
         assert '2013-01-12 23:00:00' not in resampled.index
-
 
     def test_hourly_resampling(self):
         hourly = get_hourly()
