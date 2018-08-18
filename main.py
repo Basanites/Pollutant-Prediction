@@ -175,6 +175,7 @@ def estimate_knn(x, y):
                                  'n_neighbors': range(2, 50 + 1, 2),
                                  'weights': ['uniform', 'distance']
                              },
+                             scoring='neg_mean_squared_error',
                              n_iter=20,
                              n_jobs=-1)
     knn.fit(x, y)
@@ -194,6 +195,7 @@ def estimate_decision_tree(x, y):
                                  param_grid={
                                      'max_depth': range(3, 25 + 1, 2)
                                  },
+                                 scoring='neg_mean_squared_error',
                                  n_jobs=-1)
     decision_tree.fit(x, y)
     logger.log(f'Found best Decision Tree model with params {decision_tree.best_params_}'
@@ -214,6 +216,7 @@ def estimate_random_forest(x, y):
                                            'n_estimators': range(5, 125 + 1, 5),
                                            'max_depth': [None, 5, 10, 20],
                                        },
+                                       scoring='neg_mean_squared_error',
                                        n_iter=20,
                                        n_jobs=-1)
     random_forest.fit(x, y)
@@ -233,7 +236,9 @@ def estimate_linear_regression(x, y):
     linear_regression = GridSearchCV(linear_model.LinearRegression(),
                                      param_grid={
                                          'normalize': [True, False]
-                                     })
+                                     },
+                                     scoring='neg_mean_squared_error',
+                                     n_jobs=-1)
     linear_regression.fit(x, y)
     logger.log(f'Found best Linear Regression model with params {linear_regression.best_params_}'
         f' and score {linear_regression.best_score_}', 3)
@@ -263,6 +268,7 @@ def estimate_gru(x, y, rate):
                                  'batch_size': batch_size,
                                  'learning_rate': np.linspace(0.001, 0.02, 10, endpoint=True)
                              },
+                             scoring='neg_mean_squared_error',
                              n_iter=20,
                              n_jobs=-1)
     gru.fit(x, y)
