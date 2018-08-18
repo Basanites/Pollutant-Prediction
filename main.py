@@ -318,18 +318,10 @@ def estimate_ets(y, distance, rate):
                     fit_time = time.time() - fit_start
 
                     if mse < best_mse:
-                        best_params = {
-                            'trend': trend,
-                            'seasonal': season,
-                            'damped': damped,
-                            'freq': rate,
-                            'seasonal_periods': distance,
-                            'use_boxcox': box_cox,
-                            # 'smoothing_level': fit.smoothing_level,
-                            # 'smoothing_slope': fit.smoothing_slope,
-                            # 'smoothing_seasonal': fit.smoothing_seasonal,
-                            # 'damping_slope': fit.damping_slope
-                        }
+                        best_params = fit.params
+                        best_params['trend'] = trend
+                        best_params['seasonal'] = season
+                        best_params['damped'] = damped
                         best_mse = mse
                         best_fit_time = fit_time
 
