@@ -1,6 +1,6 @@
 import glob
-import time
 import sys
+import time
 
 import numpy as np
 import pandas as pd
@@ -15,6 +15,7 @@ from tensorflow.python.keras import Sequential, optimizers
 from tensorflow.python.keras.layers import GRU, Dropout, Dense
 from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
 
+from logger import log
 from timeseries.predictions import create_artificial_features
 
 
@@ -168,6 +169,7 @@ def estimate_knn(x, y):
     :param x:   The samples arraylike
     :param y:   The targets arraylike
     """
+    log('Finding best KNN parameters', 3)
     knn = RandomizedSearchCV(neighbors.KNeighborsRegressor(),
                              param_distributions={
                                  'n_neighbors': range(2, 50 + 1, 2),
@@ -176,7 +178,7 @@ def estimate_knn(x, y):
                              n_iter=20,
                              n_jobs=-1)
     knn.fit(x, y)
-    print(knn.best_params_, '\n', knn.best_score_)
+    log(f'Found best KNN model with params {knn.best_params_} and score {knn.best_score_}', 3)
 
 
 def estimate_decision_tree(x, y):
@@ -187,13 +189,15 @@ def estimate_decision_tree(x, y):
     :param x:   The samples arraylike
     :param y:   The targets arraylike
     """
+    log('Finding best Decision Tree parameters', 3)
     decision_tree = GridSearchCV(tree.DecisionTreeRegressor(),
                                  param_grid={
                                      'max_depth': range(3, 25 + 1, 2)
                                  },
                                  n_jobs=-1)
     decision_tree.fit(x, y)
-    print(decision_tree.best_params_, '\n', decision_tree.best_score_)
+    log(f'Found best Decision Tree model with params {decision_tree.best_params_}'
+        f' and score {decision_tree.best_score_}', 3)
 
 
 def estimate_random_forest(x, y):
@@ -204,6 +208,7 @@ def estimate_random_forest(x, y):
     :param x:   The samples arraylike
     :param y:   The targets arraylike
     """
+    log(f'Finding best Random Forest parameters', 3)
     random_forest = RandomizedSearchCV(ensemble.RandomForestRegressor(),
                                        param_distributions={
                                            'n_estimators': range(5, 125 + 1, 5),
@@ -212,7 +217,8 @@ def estimate_random_forest(x, y):
                                        n_iter=20,
                                        n_jobs=-1)
     random_forest.fit(x, y)
-    print(random_forest.best_params_, '\n', random_forest.best_score_)
+    log(f'Found best Random Forest model with params {random_forest.best_params_}'
+        f' and score {random_forest.best_score_}', 3)
 
 
 def estimate_linear_regression(x, y):
@@ -223,12 +229,14 @@ def estimate_linear_regression(x, y):
     :param x:   The samples arraylike
     :param y:   The targets arraylike
     """
+    log('Finding best Linear Regression parameters', 3)
     linear_regression = GridSearchCV(linear_model.LinearRegression(),
                                      param_grid={
                                          'normalize': [True, False]
                                      })
     linear_regression.fit(x, y)
-    print(linear_regression.best_params_, '\n', linear_regression.best_score_)
+    log(f'Found best Linear Regression model with params {linear_regression.best_params_}'
+        f' and score {linear_regression.best_score_}', 3)
 
 
 def estimate_gru(x, y, rate):
@@ -240,6 +248,7 @@ def estimate_gru(x, y, rate):
     :param y:       The targets series
     :param rate:    The samplingrate ('D' or 'H')
     """
+    log('Finding best GRU parameters', 3)
     x, y, x_scaler, y_scaler = scale_inputs(x, y)
     x = x.values.reshape(x.shape[0], x.shape[1], 1)
     y = y.values
@@ -258,7 +267,7 @@ def estimate_gru(x, y, rate):
                              n_iter=20,
                              n_jobs=-1)
     gru.fit(x, y)
-    print(gru.best_params_, '\n', gru.best_score_)
+    log(f'Found best GRU model with params {gru.best_params} and score {gru.best_score_}', 3)
 
 
 def estimate_arima(y, distance):
@@ -268,11 +277,12 @@ def estimate_arima(y, distance):
     :param y:           The series to predict further
     :param distance:    The amount of steps to predict
     """
+    log('Finding best ARIMA parameters', 3)
     start = time.time()
     model = auto_arima(y, start_p=1, start_q=1, max_p=4, max_q=4, error_action='ignore',
                        suppress_warnings=True, stepwise=True, out_of_sample_size=distance)
     runtime = time.time() - start
-    print(model.summary(), '\n', model.oob, '\n', runtime)
+    log(f'Found best model {model.summary} in {runtime}', 3)
 
 
 def estimate_ets(y, distance, rate):
@@ -284,6 +294,7 @@ def estimate_ets(y, distance, rate):
     :param rate:        The rate of samling for the series ('D' or 'H')
     :return:
     """
+    log('Finding best ETS model', 3)
     start = time.time()
 
     add_mul = ['additive', 'multiplicative']
@@ -300,7 +311,7 @@ def estimate_ets(y, distance, rate):
                     if not (has_negatives or box_cox is False):
                         fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
                                                    freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
-                        prediction = fit.predict(start=len(y[:-distance] - 1, end=len(y) - 1))
+                        prediction = fit.predict(start=len(y[:-distance]) - 1, end=len(y) - 1)
                         mse = mean_squared_error(y[-distance:], prediction)
 
                         if mse < best_mse:
@@ -319,7 +330,7 @@ def estimate_ets(y, distance, rate):
                             best_mse = mse
 
     runtime = time.time() - start
-    print(best_params, '\n', best_mse, '\n', runtime)
+    log(f'Found best ETS model with mse {best_mse} and params {best_params} in {runtime}', 3)
 
 
 def estimate_prophet(y, distance, rate):
@@ -330,6 +341,7 @@ def estimate_prophet(y, distance, rate):
     :param distance:    The amount of steps to predict
     :param rate:        The rate of sampling ('D' or 'H')
     """
+    log(f'Finding best Prophet model', 3)
     start = time.time()
     model = Prophet().fit(pd.DataFrame(data={
         'ds': y.index[:-distance],
@@ -337,7 +349,7 @@ def estimate_prophet(y, distance, rate):
     }))
     mse = mean_squared_error(y[-distance:], model.predict(model.make_future_dataframe(distance, rate)))
     runtime = time.time() - start
-    print(mse, '\n', runtime)
+    log(f'Found best Prophet model with mse {mse} in {runtime}', 3)
 
 
 def direct_parameter_estimation(x, y, rate):
@@ -393,14 +405,17 @@ def model_testing(dataframe, pollutant, rate):
     rest = dataframe.drop(columns=[pollutant])[distance:]
     artificial = create_artificial_features(series, rate, steps=distance)[distance:]
 
+    log('Running tests for timebased models', 2)
     timebased_parameter_estimation(series, distance, rate)
 
     rotated = series[distance:]
     for i in range(1, distance + 1):
         rotated = rotate_series(rotated)[:-1]
 
+        log(f'Running tests for direct models on artificial set with distance {i}{rate}', 2)
         direct_parameter_estimation(artificial[:-i], rotated, rate)
         if len(rest.columns.tolist()) > 1:
+            log(f'Running tests for direct models on direct set with distance {i}{rate}', 2)
             direct_parameter_estimation(rest[:-i], rotated, rate)
 
 
@@ -474,7 +489,11 @@ def test_pollutants(dataframe, rate):
     :param rate:        The rate of the samples ('H' or 'D')
     """
     for pollutant in dataframe.columns:
+        log(f'Running tests for {pollutant}', 1)
         model_testing(dataframe, pollutant, rate)
+
+        log(f'Running tests for differenced {pollutant}', 1)
+        model_testing(difference_dataframe(dataframe), pollutant, rate)
 
 
 if __name__ == '__main__':
@@ -482,8 +501,12 @@ if __name__ == '__main__':
     modeldir = './models'
     statsfile = './stats.csv'
     files = glob.glob(datadir + '/*')
+    debug = not sys.gettrace() is None
+    if debug:
+        log('Running in debugger, dataframes will be cut to 500 elements')
 
     for csv in files:
+        log(f'Running tests for {csv}')
         station, steprate = get_info(csv, datadir)
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
             columns=['AirQualityStationEoICode', 'AveragingTime'])
@@ -492,8 +515,7 @@ if __name__ == '__main__':
         if len(df > 8760):
             df = df[:8760]
 
-        if not sys.gettrace() is None:
-            print('Running in debugger, df is cut to 500 elements')
+        if debug:
             df = df[:500]
 
         test_pollutants(df, steprate)
