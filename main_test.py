@@ -3,7 +3,7 @@ import math
 import pandas as pd
 
 from main import resample_dataframe, get_info, scale_series, rescale_series, scale_dataframe, rescale_dataframe, \
-    difference_series, dedifference_series
+    difference_series, dedifference_series, difference_dataframe, dediffference_dataframe
 
 
 def get_daily():
@@ -147,3 +147,23 @@ class TestSeriesDifferencing:
         assert dedifferenced.index is differenced.index
         assert dedifferenced.index.equals(series.index[1:])
         assert dedifferenced.iloc[0].astype(float) == series.iloc[1].astype(float)
+
+
+class TestDataframeDifferencing:
+    def test_differencing(self):
+        df = get_daily()
+        series = df['PM10']
+        differenced = difference_dataframe(df)
+
+        assert differenced.index.equals(df.index[1:])
+        assert differenced.iloc[0].astype(float).equals(df.iloc[1].subtract(df.iloc[0]).astype(float))
+        assert differenced.iloc[0]['PM10'] == (series.iloc[1] - series.iloc[0])
+
+    def test_dedifferencing(self):
+        df = get_daily()
+        differenced = difference_dataframe(df)
+        dedifferenced = dediffference_dataframe(differenced, df.iloc[0])
+
+        assert dedifferenced.index is differenced.index
+        assert dedifferenced.index.equals(df.index[1:])
+        assert dedifferenced.iloc[0].astype(float).equals(df.iloc[1].astype(float))

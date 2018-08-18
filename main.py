@@ -345,12 +345,7 @@ def difference_series(series, stepsize=1):
     :param stepsize:    The stepsize to use for differentiation
     :return:            The differentiated Series
     """
-    diff = list()
-    for i in range(stepsize, len(series), stepsize):
-        diff.append(series.iloc[i] - series.iloc[i - stepsize])
-    out = pd.Series(diff)
-    out.index = series.index[stepsize::stepsize]
-    return out
+    return series.diff(periods=stepsize).iloc[stepsize:]
 
 
 def dedifference_series(series, start_level, stepsize=1):
@@ -382,11 +377,7 @@ def difference_dataframe(dataframe, stepsize=1):
     :param stepsize:    The stepsize to use for differentiation
     :return:            The differentiated dataframe
     """
-    diff = pd.DataFrame()
-    for i in range(stepsize, len(dataframe), stepsize):
-        diff = diff.join(dataframe.iloc[i] - dataframe.iloc[i - stepsize])
-    diff.index = dataframe.index[stepsize::stepsize]
-    return diff
+    return dataframe.diff(periods=stepsize).iloc[stepsize:]
 
 
 def dediffference_dataframe(dataframe, start_row, stepsize=1):
@@ -401,8 +392,8 @@ def dediffference_dataframe(dataframe, start_row, stepsize=1):
     dediff = pd.DataFrame()
     sums = start_row
     for i in range(0, len(dataframe), stepsize):
-        sums += dataframe.iloc[i]
-        dediff.join(sums)
+        sums = sums.add(dataframe.iloc[i])
+        dediff = dediff.append(pd.DataFrame([sums]))
     dediff.index = dataframe.index
     return dediff
 
