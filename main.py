@@ -159,6 +159,16 @@ def rescale_input(x, y, x_scaler, y_scaler):
     return rescaled_x, rescaled_y
 
 
+def get_ets_params(ets_fit):
+    params = {
+        'trend': ets_fit.trend,
+        'seasonal': ets_fit.seasonal,
+        'damped': ets_fit.damped,
+        'seasonal_periods': ets_fit.seasonal_periods
+    }
+    return params
+
+
 def estimate_knn(x, y):
     """
     Estimates the best parameters for k Nearest Neighbors given input samples and targets.
@@ -268,13 +278,31 @@ def estimate_arima(y, distance):
     print(model.summary(), '\n', model.oob, '\n', runtime)
 
 
-def estimate_ets(y, distance):
+def estimate_ets(y, distance, rate):
     start = time.time()
-    model = ExponentialSmoothing(y)  # , trend=trendtype, freq=rate, damped=damped,
-    #   seasonal=seasontype, seasonal_periods=seasonlength).fit(use_boxcox=box_cox)
-    # TODO GridSearch ETS params
+
+    add_mul = ['additive', 'multiplicative']
+    t_f = [True, False]
+    has_negatives = y.min() <= 0
+    best_mse = 1000
+    best_params = {}
+
+    for trend in add_mul:
+        for season in add_mul:
+            for damped in t_f:
+                for box_cox in t_f:
+                    if not (has_negatives or box_cox == False):
+                        fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
+                                                     freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
+                        prediction = fit.predict(start=len(y[:-distance] - 1, end=len(y) -1))
+                        mse = mean_squared_error(y[-distance:], prediction)
+
+                        if mse < best_mse:
+                            best_params = get_ets_params(fit)
+                            best_mse = mse
+
     runtime = time.time() - start
-    print('\n', runtime)  # TODO find best params
+    print(best_params, '\n', best_mse,'\n', runtime)
 
 
 def estimate_prophet(y, distance, rate):
@@ -311,7 +339,7 @@ def timebased_parameter_estimation(y, distance, rate):
     :param y:       The targets to use
     :param rate:    The samplingrate ('D' or 'H')
     """
-    estimate_ets(y, distance)
+    estimate_ets(y, distance, rate)
     estimate_arima(y, distance)
     estimate_prophet(y, distance, rate)
 
@@ -350,8 +378,6 @@ def model_testing(dataframe, pollutant, rate):
         direct_parameter_estimation(artificial[:-i], rotated, rate)
         if len(rest.columns.tolist()) > 1:
             direct_parameter_estimation(rest[:-i], rotated, rate)
-
-
 
 
 def difference_series(series, stepsize=1):
