@@ -1,7 +1,8 @@
 import math
+
 import pandas as pd
 
-from main import resample_dataframe, get_info, scale_series, rescale_series
+from main import resample_dataframe, get_info, scale_series, rescale_series, scale_dataframe, rescale_dataframe
 
 
 def get_daily():
@@ -103,3 +104,27 @@ class TestScalingSeries:
         assert rescaled.iloc[0] == series.iloc[0]
         assert len(series) is len(rescaled)
         assert series.index is rescaled.index
+
+
+class TestScalingDataframe:
+    def test_scale(self):
+        df = get_daily()
+        scaled, scaler = scale_dataframe(df.astype(float))
+
+        assert df.max() is not 1
+        assert df.min() is not -1
+        assert len(df) is len(scaled)
+        assert df.index is scaled.index
+        assert df.columns is scaled.columns
+        for column in scaled.columns:
+            assert math.isclose(scaled[column].max(), 1, rel_tol=0.001)
+            assert math.isclose(scaled[column].min(), -1, rel_tol=0.001)
+
+    def test_rescale(self):
+        df = get_daily()
+        scaled, scaler = scale_dataframe(df.astype(float))
+        rescaled = rescale_dataframe(scaled, scaler)
+
+        assert rescaled.iloc[0].equals(df.iloc[0].astype(float))
+        assert len(df) is len(rescaled)
+        assert df.index is rescaled.index
