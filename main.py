@@ -323,8 +323,9 @@ def estimate_ets(y, distance, rate):
     stats = list()
     def get_ets_stats(trend, season, damped, box_cox):
         print(f'running ets trend={trend}, damped={damped}, season={season}, box_cox={box_cox}')
-        fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
-                                   seasonal_periods=distance).fit(use_boxcox=box_cox)
+        model = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
+                                   seasonal_periods=distance)
+        fit = model.fit(use_boxcox=box_cox)
         prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
         prediction = prediction[~np.isnan(prediction)]
         mse = mean_squared_error(y[-len(prediction):], prediction)
@@ -349,7 +350,7 @@ def estimate_ets(y, distance, rate):
                 if not (has_negatives and box_cox is True):
                     matrix.append((season, damped, box_cox))
 
-    Parallel(n_jobs=-1)(delayed(get_ets_stats(trend, params[0], params[1], params[2])) for params in matrix)
+    Parallel(n_jobs=-1)(delayed(get_ets_stats)(trend, params[0], params[1], params[2]) for params in matrix)
 
     for item in stats:
         if item[0] < best_mse:
