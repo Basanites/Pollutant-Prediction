@@ -177,6 +177,7 @@ def estimate_knn(x, y):
                                  'weights': ['uniform', 'distance']
                              },
                              scoring='neg_mean_squared_error',
+                             verbose=2,
                              n_iter=20,
                              n_jobs=-1)
     knn.fit(x, y)
@@ -199,6 +200,7 @@ def estimate_decision_tree(x, y):
                                      'max_depth': range(3, 25 + 1, 2)
                                  },
                                  scoring='neg_mean_squared_error',
+                                 verbose=2,
                                  n_jobs=-1)
     decision_tree.fit(x, y)
     logger.log(f'Found best Decision Tree model with params {decision_tree.best_params_}'
@@ -222,6 +224,7 @@ def estimate_random_forest(x, y):
                                            'max_depth': [None, 5, 10, 20],
                                        },
                                        scoring='neg_mean_squared_error',
+                                       verbose=2,
                                        n_iter=20,
                                        n_jobs=-1)
     random_forest.fit(x, y)
@@ -245,6 +248,7 @@ def estimate_linear_regression(x, y):
                                          'normalize': [True, False]
                                      },
                                      scoring='neg_mean_squared_error',
+                                     verbose=2,
                                      n_jobs=-1)
     linear_regression.fit(x, y)
     logger.log(f'Found best Linear Regression model with params {linear_regression.best_params_}'
@@ -278,6 +282,7 @@ def estimate_gru(x, y, rate):
                                  'learning_rate': np.linspace(0.001, 0.02, 10, endpoint=True)
                              },
                              scoring='neg_mean_squared_error',
+                             verbose=2,
                              n_iter=20,
                              n_jobs=-1)
     gru.fit(x, y)
@@ -329,6 +334,7 @@ def estimate_ets(y, distance, rate):
             for box_cox in t_f:
                 # only use box_cox if no negative values in input
                 if not (has_negatives and box_cox is True):
+                    print(f'running ets trend={trend}, season={season}, box_cox={box_cox}')
                     fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
                                                seasonal_periods=distance).fit(use_boxcox=box_cox)
                     prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
