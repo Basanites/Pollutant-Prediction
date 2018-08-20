@@ -330,9 +330,10 @@ def estimate_ets(y, distance, rate):
                 # only use box_cox if no negative values in input
                 if not (has_negatives and box_cox is True):
                     fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
-                                               freq=rate, seasonal_periods=distance).fit(use_boxcox=box_cox)
+                                               seasonal_periods=distance).fit(use_boxcox=box_cox)
                     prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
-                    mse = mean_squared_error(y[-distance:], prediction)
+                    prediction = prediction[~np.isnan(prediction)]
+                    mse = mean_squared_error(y[-len(prediction):], prediction)
 
                     if mse < best_mse:
                         best_params = fit.params
@@ -569,7 +570,7 @@ if __name__ == '__main__':
     datadir = './post'
     modeldir = './models'
     statsfile = './stats.csv'
-    files = glob.glob(datadir + '/*')
+    files = glob.glob(datadir + '/*.csv')
     debug_len = 200
     debug = not sys.gettrace() is None
     if debug:
