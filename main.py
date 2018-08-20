@@ -322,7 +322,7 @@ def estimate_ets(y, distance, rate):
     """
     stats = list()
     def get_ets_stats(trend, season, damped, box_cox):
-        print(f'running ets trend={trend}, season={season}, box_cox={box_cox}')
+        print(f'running ets trend={trend}, damped={damped}, season={season}, box_cox={box_cox}')
         fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
                                    seasonal_periods=distance).fit(use_boxcox=box_cox)
         prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
