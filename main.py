@@ -585,8 +585,10 @@ if __name__ == '__main__':
     if not os.path.exists('./results'):
         os.makedirs('./results')
 
+    i = 0
     for csv in files:
-        logger.log(f'Running tests for {csv}')
+        i += 1
+        logger.log(f'({i}/{len(files)})\t\tRunning tests for {csv}')
         station, steprate = get_info(csv, datadir)
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
             columns=['AirQualityStationEoICode', 'AveragingTime'])
