@@ -5,6 +5,7 @@ import time
 
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
 from fbprophet import Prophet
 from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
@@ -319,6 +320,17 @@ def estimate_ets(y, distance, rate):
     :param rate:        The rate of samling for the series ('D' or 'H')
     :return:
     """
+    stats = list()
+    def get_ets_stats(trend, season, damped, box_cox):
+        print(f'running ets trend={trend}, season={season}, box_cox={box_cox}')
+        fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
+                                   seasonal_periods=distance).fit(use_boxcox=box_cox)
+        prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
+        prediction = prediction[~np.isnan(prediction)]
+        mse = mean_squared_error(y[-len(prediction):], prediction)
+
+        stats.append((fit.params, mse))
+
     logger.log('Finding best ETS model', 3)
     start = time.time()
 
@@ -328,25 +340,22 @@ def estimate_ets(y, distance, rate):
     best_mse = 1000
     best_params = {}
 
+    matrix = list()
     trend = 'additive'  # because of nan errors otherwise
     for season in add_mul:
         for damped in t_f:
             for box_cox in t_f:
                 # only use box_cox if no negative values in input
                 if not (has_negatives and box_cox is True):
-                    print(f'running ets trend={trend}, season={season}, box_cox={box_cox}')
-                    fit = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
-                                               seasonal_periods=distance).fit(use_boxcox=box_cox)
-                    prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
-                    prediction = prediction[~np.isnan(prediction)]
-                    mse = mean_squared_error(y[-len(prediction):], prediction)
+                    matrix.append((season, damped, box_cox))
 
-                    if mse < best_mse:
-                        best_params = fit.params
-                        best_params['trend'] = trend
-                        best_params['seasonal'] = season
-                        best_params['damped'] = damped
-                        best_mse = mse
+    Parallel(n_jobs=-1)(delayed(get_ets_stats(trend, params[0], params[1], params[2])) for params in matrix)
+
+    for item in stats:
+        if item[0] < best_mse:
+            best_mse = item[0]
+            best_params = item[1]
+
 
     runtime = time.time() - start
     logger.log(f'Found best ETS model with mse {best_mse} and params {best_params} in {runtime}', 3)
