@@ -3,19 +3,20 @@ import os
 import sys
 import time
 
+os.environ["LOKY_PICKLER"]='cloudpickle'
+import multiprocessing
+multiprocessing.set_start_method('forkserver')
+
 import numpy as np
 import pandas as pd
-from joblib import Parallel, delayed
 from fbprophet import Prophet
+from joblib import Parallel, delayed
 from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.preprocessing import MinMaxScaler
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
-from tensorflow.python.keras import Sequential, optimizers
-from tensorflow.python.keras.layers import GRU, Dropout, Dense
-from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
 
 from logger import Logger
 from timeseries.predictions import create_artificial_features
@@ -61,6 +62,9 @@ def create_gru(weights, input_shape, dropout_rate, learning_rate):
     :param learning_rate:   The learning rate of the optimizer
     :return:                The compiled model
     """
+    from tensorflow.python.keras import Sequential, optimizers
+    from tensorflow.python.keras.layers import GRU, Dropout, Dense
+
     optimizer = optimizers.RMSprop(lr=learning_rate)
 
     model = Sequential()
@@ -258,6 +262,15 @@ def estimate_linear_regression(x, y):
     return linear_regression.best_params_, linear_regression.best_score_
 
 
+def tensorflow_score(estimator, X, y, **kwargs):
+    from keras.models import Sequential
+    kwargs = estimator.filter_sk_params(Sequential.evaluate, kwargs)
+    loss = estimator.model.evaluate(X, y, **kwargs)
+    if type(loss) is list:
+        return -loss[0]
+    return -loss
+
+
 def estimate_gru(x, y, rate):
     """
     Estimates best parameters for GRU given input samples and targets.
@@ -267,6 +280,9 @@ def estimate_gru(x, y, rate):
     :param y:       The targets series
     :param rate:    The samplingrate ('D' or 'H')
     """
+    from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
+    from tensorflow.python.keras.backend import clear_session
+    clear_session()
     logger.log('Finding best GRU parameters', 3)
     x, y, x_scaler, y_scaler = scale_inputs(x, y)
     x = x.values.reshape(x.shape[0], x.shape[1], 1)
@@ -282,10 +298,10 @@ def estimate_gru(x, y, rate):
                                  'batch_size': batch_size,
                                  'learning_rate': np.linspace(0.001, 0.02, 10, endpoint=True)
                              },
-                             scoring='neg_mean_squared_error',
+                             scoring=tensorflow_score,
                              verbose=2,
-                             n_iter=20,
-                             n_jobs=-1)
+                             n_jobs=-1,
+                             n_iter=1)
     gru.fit(x, y)
     logger.log(f'Found best GRU model with params {gru.best_params_} and score {gru.best_score_}', 3)
 
@@ -321,10 +337,11 @@ def estimate_ets(y, distance, rate):
     :return:
     """
     stats = list()
+
     def get_ets_stats(trend, season, damped, box_cox):
         print(f'running ets trend={trend}, damped={damped}, season={season}, box_cox={box_cox}')
         model = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
-                                   seasonal_periods=distance)
+                                     seasonal_periods=distance)
         fit = model.fit(use_boxcox=box_cox)
         prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
         prediction = prediction[~np.isnan(prediction)]
@@ -356,7 +373,6 @@ def estimate_ets(y, distance, rate):
         if item[0] < best_mse:
             best_mse = item[0]
             best_params = item[1]
-
 
     runtime = time.time() - start
     logger.log(f'Found best ETS model with mse {best_mse} and params {best_params} in {runtime}', 3)
@@ -397,10 +413,10 @@ def direct_parameter_estimation(x, y, rate):
     params = dict()
     scores = dict()
 
-    params['knn'], scores['knn'] = estimate_knn(x, y)
-    params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
-    params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
-    params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
+    # params['knn'], scores['knn'] = estimate_knn(x, y)
+    # params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
+    # params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
+    # params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
     params['gru'], scores['gru'] = estimate_gru(x, y, rate)
 
     return params, scores
@@ -417,10 +433,10 @@ def timebased_parameter_estimation(y, distance, rate):
     params = dict()
     scores = dict()
 
-    params['ets'], scores['ets'] = estimate_ets(y, distance, rate)
-    params['arima'], scores['arima'] = estimate_arima(y, distance)
-    scores['prophet'] = estimate_prophet(y, distance, rate)
-    params['prophet'] = dict()
+    # params['ets'], scores['ets'] = estimate_ets(y, distance, rate)
+    # params['arima'], scores['arima'] = estimate_arima(y, distance)
+    # scores['prophet'] = estimate_prophet(y, distance, rate)
+    # params['prophet'] = dict()
 
     return params, scores
 
@@ -475,7 +491,8 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
     rest = dataframe.drop(columns=[pollutant])[distance:]
     artificial = create_artificial_features(series, rate, steps=distance)[distance:]
 
-    if not os.path.exists(f'./results/{station}-{pollutant}-distance={distance}-differenced={differenced}-direct=False.csv'):
+    if not os.path.exists(
+            f'./results/{station}-{pollutant}-distance={distance}-differenced={differenced}-direct=False.csv'):
         logger.log('Running tests for timebased models', 2)
         timebased_params, timebased_scores = timebased_parameter_estimation(series, distance, rate)
         save_results(station, pollutant, timebased_params, timebased_scores, distance, direct=False)
@@ -486,7 +503,8 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
     for i in range(1, distance + 1):
         rotated = rotate_series(rotated)[:-1]
 
-        if not os.path.exists(f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=True.csv'):
+        if not os.path.exists(
+                f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=True.csv'):
             logger.log(f'Running tests for direct models on artificial set with distance {i}{rate}', 2)
             artificial_params, artificial_scores = direct_parameter_estimation(artificial[:-i], rotated, rate)
             save_results(station, pollutant, artificial_params, artificial_scores, i)
@@ -495,7 +513,8 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
                        f' because they already exist', 2)
 
         if len(rest.columns.tolist()) > 1:
-            if not os.path.exists(f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=False.csv'):
+            if not os.path.exists(
+                    f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=False.csv'):
                 logger.log(f'Running tests for direct models on direct set with distance {i}{rate}', 2)
                 direct_params, direct_scores = direct_parameter_estimation(rest[:-i], rotated, rate)
                 save_results(station, pollutant, direct_params, direct_scores, i, artificial=False)
