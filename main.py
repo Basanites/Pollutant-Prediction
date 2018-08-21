@@ -287,7 +287,7 @@ def estimate_gru(x, y, rate):
                              n_iter=20,
                              n_jobs=-1)
     gru.fit(x, y)
-    logger.log(f'Found best GRU model with params {gru.best_params} and score {gru.best_score_}', 3)
+    logger.log(f'Found best GRU model with params {gru.best_params_} and score {gru.best_score_}', 3)
 
     return gru.best_params_, gru.best_score_
 
