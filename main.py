@@ -1,10 +1,10 @@
 import glob
 import os
-import sys
 import time
 
-os.environ["LOKY_PICKLER"]='cloudpickle'
+os.environ["LOKY_PICKLER"] = 'cloudpickle'
 import multiprocessing
+
 multiprocessing.set_start_method('forkserver')
 
 import numpy as np
@@ -362,7 +362,7 @@ def estimate_ets(y, distance, rate):
     trend = 'additive'  # because of nan errors otherwise
     for season in add_mul:
         for damped in t_f:
-            for box_cox in t_f:
+            for box_cox in [False]:
                 # only use box_cox if no negative values in input
                 if not (has_negatives and box_cox is True):
                     matrix.append((season, damped, box_cox))
@@ -607,7 +607,7 @@ if __name__ == '__main__':
     statsfile = './stats.csv'
     files = glob.glob(datadir + '/*.csv')
     debug_len = 200
-    debug = not sys.gettrace() is None
+    debug = False  # not sys.gettrace() is None
     if debug:
         logger.log(f'Running in debugger, dataframes will be cut to {debug_len} elements')
 
