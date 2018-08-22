@@ -486,6 +486,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
     :param rate:        The rate of sampling ('D' or 'H')
     """
     distance = 7 if rate == 'D' else 24  # distance for predictions, always 1 season (24 hrs or 7 days)
+    use_values = [1, 2, 3, 4, 5, 6, 7] if distance == 7 else [1, 2, 3, 5, 10, 12, 24]
 
     series = dataframe[pollutant]
     rest = dataframe.drop(columns=[pollutant])[distance:]
@@ -503,24 +504,26 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
     for i in range(1, distance + 1):
         rotated = rotate_series(rotated)[:-1]
 
-        if not os.path.exists(
-                f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=True.csv'):
-            logger.log(f'Running tests for direct models on artificial set with distance {i}{rate}', 2)
-            artificial_params, artificial_scores = direct_parameter_estimation(artificial[:-i], rotated, rate)
-            save_results(station, pollutant, artificial_params, artificial_scores, i)
-        else:
-            logger.log(f'Skipping tests for direct models on artificial set with distance {i}{rate},'
-                       f' because they already exist', 2)
-
-        if len(rest.columns.tolist()) > 1:
+        # only use specific predefined forecast distances.
+        if i in use_values:
             if not os.path.exists(
-                    f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=False.csv'):
-                logger.log(f'Running tests for direct models on direct set with distance {i}{rate}', 2)
-                direct_params, direct_scores = direct_parameter_estimation(rest[:-i], rotated, rate)
-                save_results(station, pollutant, direct_params, direct_scores, i, artificial=False)
+                    f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=True.csv'):
+                logger.log(f'Running tests for direct models on artificial set with distance {i}{rate}', 2)
+                artificial_params, artificial_scores = direct_parameter_estimation(artificial[:-i], rotated, rate)
+                save_results(station, pollutant, artificial_params, artificial_scores, i)
             else:
-                logger.log(f'Skipping tests for direct models on direct set with distance {i}{rate},'
+                logger.log(f'Skipping tests for direct models on artificial set with distance {i}{rate},'
                            f' because they already exist', 2)
+
+            if len(rest.columns.tolist()) > 1:
+                if not os.path.exists(
+                        f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=False.csv'):
+                    logger.log(f'Running tests for direct models on direct set with distance {i}{rate}', 2)
+                    direct_params, direct_scores = direct_parameter_estimation(rest[:-i], rotated, rate)
+                    save_results(station, pollutant, direct_params, direct_scores, i, artificial=False)
+                else:
+                    logger.log(f'Skipping tests for direct models on direct set with distance {i}{rate},'
+                               f' because they already exist', 2)
 
 
 def difference_series(series, stepsize=1):
@@ -607,7 +610,7 @@ if __name__ == '__main__':
     statsfile = './stats.csv'
     files = glob.glob(datadir + '/*.csv')
     debug_len = 200
-    debug = False  # not sys.gettrace() is None
+    debug = not sys.gettrace() is None
     if debug:
         logger.log(f'Running in debugger, dataframes will be cut to {debug_len} elements')
 
