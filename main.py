@@ -361,7 +361,7 @@ def estimate_ets(y, distance, rate):
 
     matrix = list()
     trend = 'additive'  # because of nan errors otherwise
-    for season in add_mul:
+    for season in ['additive']: # because of differencing problems otherwise
         for damped in t_f:
             for box_cox in [False]:
                 # only use box_cox if no negative values in input
