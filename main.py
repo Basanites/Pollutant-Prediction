@@ -272,7 +272,7 @@ def tensorflow_score(estimator, X, y, **kwargs):
     return -loss
 
 
-def estimate_gru(x, y, rate):
+def estimate_gru(x, y, batch_size):
     """
     Estimates best parameters for GRU given input samples and targets.
     Estimated parameters are: weights, dropout_rate, epochs, batch_size and learning rate.
@@ -288,7 +288,7 @@ def estimate_gru(x, y, rate):
     x, y, x_scaler, y_scaler = scale_inputs(x, y)
     x = x.values.reshape(x.shape[0], x.shape[1], 1)
     y = y.values
-    batch_size = [24, 24 * 7] if rate == 'H' else [7, 7 * 30]
+    #batch_size = [24, 24 * 7] if rate == 'H' else [7, 7 * 30]
 
     gru = RandomizedSearchCV(KerasRegressor(create_gru, verbose=0),
                              param_distributions={
@@ -296,7 +296,7 @@ def estimate_gru(x, y, rate):
                                  'dropout_rate': np.linspace(0.1, 0.3, 3, endpoint=True),
                                  'input_shape': [(x.shape[1], x.shape[2])],
                                  'epochs': range(1, 10 + 1),
-                                 'batch_size': batch_size,
+                                 'batch_size': [batch_size],
                                  'learning_rate': np.linspace(0.001, 0.02, 10, endpoint=True)
                              },
                              scoring=tensorflow_score,
@@ -414,11 +414,11 @@ def direct_parameter_estimation(x, y, rate):
     params = dict()
     scores = dict()
 
-    params['knn'], scores['knn'] = estimate_knn(x, y)
-    params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
-    params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
-    params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
-    params['gru'], scores['gru'] = estimate_gru(x, y, rate)
+    #params['knn'], scores['knn'] = estimate_knn(x, y)
+    #params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
+    #params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
+    #params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
+    params['gru'], scores['gru'] = estimate_gru(x, y, len(x.columns))
 
     return params, scores
 
@@ -434,10 +434,10 @@ def timebased_parameter_estimation(y, distance, rate):
     params = dict()
     scores = dict()
 
-    params['ets'], scores['ets'] = estimate_ets(y, distance, rate)
-    params['arima'], scores['arima'] = estimate_arima(y, distance)
-    scores['prophet'] = estimate_prophet(y, distance, rate)
-    params['prophet'] = dict()
+    #params['ets'], scores['ets'] = estimate_ets(y, distance, rate)
+    #params['arima'], scores['arima'] = estimate_arima(y, distance)
+    #scores['prophet'] = estimate_prophet(y, distance, rate)
+    #params['prophet'] = dict()
 
     return params, scores
 
