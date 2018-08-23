@@ -302,7 +302,7 @@ def estimate_gru(x, y, batch_size):
                              scoring=tensorflow_score,
                              verbose=2,
                              n_jobs=-1,
-                             n_iter=20)
+                             n_iter=1)
     gru.fit(x, y)
     logger.log(f'Found best GRU model with params {gru.best_params_} and score {gru.best_score_}', 3)
 
@@ -356,8 +356,6 @@ def estimate_ets(y, distance, rate):
     add_mul = ['additive', 'multiplicative']
     t_f = [True, False]
     has_negatives = y.min() <= 0
-    best_mse = 1000000
-    best_params = {}
 
     matrix = list()
     trend = 'additive'  # because of nan errors otherwise
@@ -370,6 +368,9 @@ def estimate_ets(y, distance, rate):
 
     Parallel(n_jobs=-1)(delayed(get_ets_stats)(trend, params[0], params[1], params[2]) for params in matrix)
 
+
+    best_mse = stats[0][0]
+    best_params = stats[0][1]
     for item in stats:
         if item[0] < best_mse:
             best_mse = item[0]
