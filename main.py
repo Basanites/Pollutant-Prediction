@@ -279,7 +279,6 @@ def estimate_gru(x, y, batch_size):
 
     :param x:       The samples dataframe
     :param y:       The targets series
-    :param rate:    The samplingrate ('D' or 'H')
     """
     from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
     from tensorflow.python.keras.backend import clear_session
@@ -288,7 +287,7 @@ def estimate_gru(x, y, batch_size):
     x, y, x_scaler, y_scaler = scale_inputs(x, y)
     x = x.values.reshape(x.shape[0], x.shape[1], 1)
     y = y.values
-    #batch_size = [24, 24 * 7] if rate == 'H' else [7, 7 * 30]
+    # batch_size = [24, 24 * 7] if rate == 'H' else [7, 7 * 30]
 
     gru = RandomizedSearchCV(KerasRegressor(create_gru, verbose=0),
                              param_distributions={
@@ -337,7 +336,6 @@ def estimate_ets(y, distance, rate):
     :param rate:        The rate of samling for the series ('D' or 'H')
     :return:
     """
-    stats = list()
 
     def get_ets_stats(trend, season, damped, box_cox):
         print(f'running ets trend={trend}, damped={damped}, season={season}, box_cox={box_cox}')
@@ -348,7 +346,7 @@ def estimate_ets(y, distance, rate):
         prediction = prediction[~np.isnan(prediction)]
         mse = mean_squared_error(y[-len(prediction):], prediction)
 
-        stats.append((fit.params, mse))
+        return (fit.params, mse)
 
     logger.log('Finding best ETS model', 3)
     start = time.time()
@@ -359,22 +357,17 @@ def estimate_ets(y, distance, rate):
 
     matrix = list()
     trend = 'additive'  # because of nan errors otherwise
-    for season in ['additive']: # because of differencing problems otherwise
+    for season in ['additive']:  # because of differencing problems otherwise
         for damped in t_f:
             for box_cox in t_f:
                 # only use box_cox if no negative values in input
                 if not (has_negatives and box_cox is True):
                     matrix.append((season, damped, box_cox))
 
-    Parallel(n_jobs=-1)(delayed(get_ets_stats)(trend, params[0], params[1], params[2]) for params in matrix)
+    stats = Parallel(n_jobs=-1)(delayed(get_ets_stats)(trend, params[0], params[1], params[2]) for params in matrix)
 
-
-    best_mse = stats[0][0]
-    best_params = stats[0][1]
-    for item in stats:
-        if item[0] < best_mse:
-            best_mse = item[0]
-            best_params = item[1]
+    best_mse = stats[0][1]
+    best_params = stats[0][0]
 
     runtime = time.time() - start
     logger.log(f'Found best ETS model with mse {best_mse} and params {best_params} in {runtime}', 3)
