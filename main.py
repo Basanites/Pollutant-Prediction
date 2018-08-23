@@ -447,8 +447,8 @@ def rotate_series(series):
     return pd.concat([series[1:], pd.Series(series.iloc[0])])
 
 
-def save_results(station, pollutant, params, scores, distance, direct=True, artificial=True):
-    savepath = f'./results/{station}-{pollutant}-{distance}-direct={direct}'
+def save_results(station, pollutant, params, scores, distance, differenced, direct=True, artificial=True):
+    savepath = f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct={direct}'
     if direct:
         savepath += f'-artificial={artificial}'
     savepath += '.csv'
@@ -491,7 +491,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
             f'./results/{station}-{pollutant}-distance={distance}-differenced={differenced}-direct=False.csv'):
         logger.log('Running tests for timebased models', 2)
         timebased_params, timebased_scores = timebased_parameter_estimation(series, distance, rate)
-        save_results(station, pollutant, timebased_params, timebased_scores, distance, direct=False)
+        save_results(station, pollutant, timebased_params, timebased_scores, distance, differenced, direct=False)
     else:
         logger.log('Skipping tests for timebased models because they already exist', 2)
 
@@ -505,7 +505,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
                     f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=True.csv'):
                 logger.log(f'Running tests for direct models on artificial set with distance {i}{rate}', 2)
                 artificial_params, artificial_scores = direct_parameter_estimation(artificial[:-i], rotated, rate)
-                save_results(station, pollutant, artificial_params, artificial_scores, i)
+                save_results(station, pollutant, artificial_params, artificial_scores, i, differenced)
             else:
                 logger.log(f'Skipping tests for direct models on artificial set with distance {i}{rate},'
                            f' because they already exist', 2)
@@ -515,7 +515,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
                         f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=False.csv'):
                     logger.log(f'Running tests for direct models on direct set with distance {i}{rate}', 2)
                     direct_params, direct_scores = direct_parameter_estimation(rest[:-i], rotated, rate)
-                    save_results(station, pollutant, direct_params, direct_scores, i, artificial=False)
+                    save_results(station, pollutant, direct_params, direct_scores, i, differenced, artificial=False)
                 else:
                     logger.log(f'Skipping tests for direct models on direct set with distance {i}{rate},'
                                f' because they already exist', 2)
