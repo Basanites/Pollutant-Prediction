@@ -356,7 +356,7 @@ def estimate_ets(y, distance, rate):
     add_mul = ['additive', 'multiplicative']
     t_f = [True, False]
     has_negatives = y.min() <= 0
-    best_mse = 1000
+    best_mse = 1000000
     best_params = {}
 
     matrix = list()
