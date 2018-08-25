@@ -301,7 +301,7 @@ def estimate_gru(x, y, batch_size):
                              scoring=tensorflow_score,
                              verbose=2,
                              n_jobs=-1,
-                             n_iter=1)
+                             n_iter=20)
     gru.fit(x, y)
     logger.log(f'Found best GRU model with params {gru.best_params_} and score {gru.best_score_}', 3)
 
