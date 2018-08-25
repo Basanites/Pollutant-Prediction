@@ -447,12 +447,7 @@ def rotate_series(series):
     return pd.concat([series[1:], pd.Series(series.iloc[0])])
 
 
-def save_results(station, pollutant, params, scores, distance, differenced, direct=True, artificial=True):
-    savepath = f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct={direct}'
-    if direct:
-        savepath += f'-artificial={artificial}'
-    savepath += '.csv'
-
+def save_results(params, scores, savepath):
     if not os.path.isfile(savepath):
         open(savepath, 'x')
 
@@ -469,6 +464,13 @@ def save_results(station, pollutant, params, scores, distance, differenced, dire
 
     dataframe = dataframe.reset_index()
     dataframe.to_csv(savepath)
+
+def build_save_string(station, pollutant, distance, differenced, direct, artificial):
+    savepath =f'./results/{station}-{pollutant}-distance={distance}-differenced={differenced}-direct={direct}'
+    if direct:
+        savepath += f'-artificial={artificial}'
+    savepath += '.csv'
+    return savepath
 
 
 def model_testing(dataframe, pollutant, station, rate, differenced):
@@ -487,11 +489,11 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
     rest = dataframe.drop(columns=[pollutant])[distance:]
     artificial = create_artificial_features(series, rate, steps=distance)[distance:]
 
-    if not os.path.exists(
-            f'./results/{station}-{pollutant}-distance={distance}-differenced={differenced}-direct=False.csv'):
+    save_path = build_save_string(station, pollutant, distance, differenced, False, artificial)
+    if not os.path.exists(save_path):
         logger.log('Running tests for timebased models', 2)
         timebased_params, timebased_scores = timebased_parameter_estimation(series, distance, rate)
-        save_results(station, pollutant, timebased_params, timebased_scores, distance, differenced, direct=False)
+        save_results(timebased_params, timebased_scores, save_path)
     else:
         logger.log('Skipping tests for timebased models because they already exist', 2)
 
@@ -501,21 +503,21 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
 
         # only use specific predefined forecast distances.
         if i in use_values:
-            if not os.path.exists(
-                    f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=True.csv'):
+            save_path = build_save_string(station, pollutant, i, differenced, True, True)
+            if not os.path.exists(save_path):
                 logger.log(f'Running tests for direct models on artificial set with distance {i}{rate}', 2)
                 artificial_params, artificial_scores = direct_parameter_estimation(artificial[:-i], rotated, rate)
-                save_results(station, pollutant, artificial_params, artificial_scores, i, differenced)
+                save_results(artificial_params, artificial_scores, save_path)
             else:
                 logger.log(f'Skipping tests for direct models on artificial set with distance {i}{rate},'
                            f' because they already exist', 2)
 
             if len(rest.columns.tolist()) > 1:
-                if not os.path.exists(
-                        f'./results/{station}-{pollutant}-distance={i}-differenced={differenced}-direct=True-artificial=False.csv'):
+                save_path = build_save_string(station, pollutant, i, differenced, True, False)
+                if not os.path.exists(save_path):
                     logger.log(f'Running tests for direct models on direct set with distance {i}{rate}', 2)
                     direct_params, direct_scores = direct_parameter_estimation(rest[:-i], rotated, rate)
-                    save_results(station, pollutant, direct_params, direct_scores, i, differenced, artificial=False)
+                    save_results(direct_params, direct_scores, save_path)
                 else:
                     logger.log(f'Skipping tests for direct models on direct set with distance {i}{rate},'
                                f' because they already exist', 2)
