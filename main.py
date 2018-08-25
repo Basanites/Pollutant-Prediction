@@ -264,6 +264,15 @@ def estimate_linear_regression(x, y):
 
 
 def tensorflow_score(estimator, X, y, **kwargs):
+    """
+    Inverses the standard scoring function so sklearn does not optimize the wrong way around.
+
+    :param estimator:   The estimator
+    :param X:           The input vector
+    :param y:           The output vector
+    :param kwargs:      kwargs
+    :return:            The inverted loss function
+    """
     from keras.models import Sequential
     kwargs = estimator.filter_sk_params(Sequential.evaluate, kwargs)
     loss = estimator.model.evaluate(X, y, **kwargs)
@@ -277,8 +286,9 @@ def estimate_gru(x, y, batch_size):
     Estimates best parameters for GRU given input samples and targets.
     Estimated parameters are: weights, dropout_rate, epochs, batch_size and learning rate.
 
-    :param x:       The samples dataframe
-    :param y:       The targets series
+    :param x:           The samples dataframe
+    :param y:           The targets series
+    :param batch_size:  The batch size for the gru
     """
     from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
     from tensorflow.python.keras.backend import clear_session
@@ -327,13 +337,12 @@ def estimate_arima(y, distance):
     return model.get_params(), mse
 
 
-def estimate_ets(y, distance, rate):
+def estimate_ets(y, distance):
     """
     Estimates the best parameters for ETS prediction of series y
 
     :param y:           The series to predict
     :param distance:    The amount of steps to predict
-    :param rate:        The rate of samling for the series ('D' or 'H')
     :return:
     """
 
@@ -351,7 +360,7 @@ def estimate_ets(y, distance, rate):
     logger.log('Finding best ETS model', 3)
     start = time.time()
 
-    add_mul = ['additive', 'multiplicative']
+    # add_mul = ['additive', 'multiplicative']
     t_f = [True, False]
     has_negatives = y.min() <= 0
 
@@ -397,13 +406,12 @@ def estimate_prophet(y, distance, rate):
     return mse
 
 
-def direct_parameter_estimation(x, y, rate):
+def direct_parameter_estimation(x, y):
     """
     Runs parameter estimation for all machine learning models for the given input
 
     :param x:       The samples to use
     :param y:       The targets to use
-    :param rate:    The samplingrate ('D' or 'H')
     """
     params = dict()
     scores = dict()
@@ -428,7 +436,7 @@ def timebased_parameter_estimation(y, distance, rate):
     params = dict()
     scores = dict()
 
-    params['ets'], scores['ets'] = estimate_ets(y, distance, rate)
+    params['ets'], scores['ets'] = estimate_ets(y, distance)
     params['arima'], scores['arima'] = estimate_arima(y, distance)
     scores['prophet'] = estimate_prophet(y, distance, rate)
     params['prophet'] = dict()
@@ -448,6 +456,13 @@ def rotate_series(series):
 
 
 def save_results(params, scores, savepath):
+    """
+    Save parameters and scores to specified path
+
+    :param params:      The model parameters dict
+    :param scores:      The model scores dict
+    :param savepath:    The path to save the file at
+    """
     if not os.path.isfile(savepath):
         open(savepath, 'x')
 
@@ -465,8 +480,21 @@ def save_results(params, scores, savepath):
     dataframe = dataframe.reset_index()
     dataframe.to_csv(savepath)
 
+
 def build_save_string(station, pollutant, distance, differenced, direct, artificial):
-    savepath =f'./results/{station}-{pollutant}-distance={distance}-differenced={differenced}-direct={direct}'
+    """
+    Builds the save location string for the given inputs.
+    The filetype will be a csv file.
+
+    :param station:     The station for which the data is saved
+    :param pollutant:   The pollutant
+    :param distance:    The forecast distance
+    :param differenced: If the dataframe was differenced
+    :param direct:      If the forecast uses a direct model
+    :param artificial:  If the forecast used the artificial set or other pollutants
+    :return:            The save location string
+    """
+    savepath = f'./results/{station}-{pollutant}-distance={distance}-differenced={differenced}-direct={direct}'
     if direct:
         savepath += f'-artificial={artificial}'
     savepath += '.csv'
@@ -481,6 +509,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
     :param pollutant:   Which pollutant to predict
     :param station:     The station to test for
     :param rate:        The rate of sampling ('D' or 'H')
+    :param differenced: If the dataframe was differenced
     """
     distance = 7 if rate == 'D' else 24  # distance for predictions, always 1 season (24 hrs or 7 days)
     use_values = [1, 2, 3, 4, 5, 6, 7] if distance == 7 else [1, 2, 3, 5, 10, 12, 24]
@@ -506,7 +535,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
             save_path = build_save_string(station, pollutant, i, differenced, True, True)
             if not os.path.exists(save_path):
                 logger.log(f'Running tests for direct models on artificial set with distance {i}{rate}', 2)
-                artificial_params, artificial_scores = direct_parameter_estimation(artificial[:-i], rotated, rate)
+                artificial_params, artificial_scores = direct_parameter_estimation(artificial[:-i], rotated)
                 save_results(artificial_params, artificial_scores, save_path)
             else:
                 logger.log(f'Skipping tests for direct models on artificial set with distance {i}{rate},'
@@ -516,7 +545,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
                 save_path = build_save_string(station, pollutant, i, differenced, True, False)
                 if not os.path.exists(save_path):
                     logger.log(f'Running tests for direct models on direct set with distance {i}{rate}', 2)
-                    direct_params, direct_scores = direct_parameter_estimation(rest[:-i], rotated, rate)
+                    direct_params, direct_scores = direct_parameter_estimation(rest[:-i], rotated)
                     save_results(direct_params, direct_scores, save_path)
                 else:
                     logger.log(f'Skipping tests for direct models on direct set with distance {i}{rate},'
@@ -590,6 +619,7 @@ def test_pollutants(dataframe, station, rate):
     Tests everything for all pollutants in a dataframe
 
     :param dataframe:   The dataframe to test
+    :param station:     The station to test
     :param rate:        The rate of the samples ('H' or 'D')
     """
     for pollutant in dataframe.columns:
@@ -614,11 +644,11 @@ if __name__ == '__main__':
     if not os.path.exists('./results'):
         os.makedirs('./results')
 
-    i = 0
+    file_num = 0
     for csv in files:
-        i += 1
-        logger.log(f'({i}/{len(files)})\t\tRunning tests for {csv}')
-        station, steprate = get_info(csv, datadir)
+        file_num += 1
+        logger.log(f'({file_num}/{len(files)})\t\tRunning tests for {csv}')
+        station_name, steprate = get_info(csv, datadir)
         df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
             columns=['AirQualityStationEoICode', 'AveragingTime'])
         df = resample_dataframe(df, steprate)
@@ -629,4 +659,4 @@ if __name__ == '__main__':
         if debug:
             df = df[:debug_len]
 
-        test_pollutants(df, station, steprate)
+        test_pollutants(df, station_name, steprate)
