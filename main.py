@@ -36,7 +36,7 @@ def resample_dataframe(dataframe, rate='H'):
             method='time')  # bfill is used here, because daily values act up otherwise
     else:
         dataframe = dataframe.resample(rate).interpolate(method='time')
-    return dataframe
+    return dataframe.dropna()
 
 
 def get_info(csv_path, directory):
