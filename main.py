@@ -15,7 +15,7 @@ from joblib import Parallel, delayed
 from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
+from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, TimeSeriesSplit
 from sklearn.preprocessing import MinMaxScaler
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
@@ -182,6 +182,7 @@ def estimate_knn(x, y):
                                  'n_neighbors': range(2, 50 + 1, 2),
                                  'weights': ['uniform', 'distance']
                              },
+                             cv=TimeSeriesSplit(),
                              scoring='neg_mean_squared_error',
                              verbose=2,
                              n_iter=20,
@@ -205,6 +206,7 @@ def estimate_decision_tree(x, y):
                                  param_grid={
                                      'max_depth': range(3, 25 + 1, 2)
                                  },
+                                 cv=TimeSeriesSplit(),
                                  scoring='neg_mean_squared_error',
                                  verbose=2,
                                  n_jobs=-1)
@@ -229,6 +231,7 @@ def estimate_random_forest(x, y):
                                            'n_estimators': range(5, 125 + 1, 5),
                                            'max_depth': [None, 5, 10, 20],
                                        },
+                                       cv=TimeSeriesSplit(),
                                        scoring='neg_mean_squared_error',
                                        verbose=2,
                                        n_iter=20,
@@ -253,6 +256,7 @@ def estimate_linear_regression(x, y):
                                      param_grid={
                                          'normalize': [True, False]
                                      },
+                                     cv=TimeSeriesSplit(),
                                      scoring='neg_mean_squared_error',
                                      verbose=2,
                                      n_jobs=-1)
@@ -308,6 +312,7 @@ def estimate_gru(x, y, batch_size):
                                  'batch_size': [batch_size],
                                  'learning_rate': np.linspace(0.001, 0.02, 10, endpoint=True)
                              },
+                             cv=TimeSeriesSplit(),
                              scoring=tensorflow_score,
                              verbose=2,
                              n_jobs=-1,
