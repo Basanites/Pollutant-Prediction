@@ -10,6 +10,7 @@ multiprocessing.set_start_method('forkserver')
 
 import numpy as np
 import pandas as pd
+import math
 from fbprophet import Prophet
 from joblib import Parallel, delayed
 from pyramid.arima import auto_arima
@@ -267,13 +268,13 @@ def estimate_linear_regression(x, y):
     return linear_regression.best_params_, linear_regression.best_score_
 
 
-def tensorflow_score(estimator, X, y, **kwargs):
+def tensorflow_score(estimator, X, y,**kwargs):
     """
     Inverses the standard scoring function so sklearn does not optimize the wrong way around.
 
     :param estimator:   The estimator
-    :param X:           The input vector
-    :param y:           The output vector
+    :param X:           The predicted values
+    :param y:           The base truth
     :param kwargs:      kwargs
     :return:            The inverted loss function
     """
@@ -316,11 +317,13 @@ def estimate_gru(x, y, batch_size):
                              scoring=tensorflow_score,
                              verbose=2,
                              n_jobs=-1,
-                             n_iter=20)
+                             n_iter=1)
     gru.fit(x, y)
-    logger.log(f'Found best GRU model with params {gru.best_params_} and score {gru.best_score_}', 3)
 
-    return gru.best_params_, gru.best_score_
+    score = -y_scaler.inverse_transform(np.asarray([math.fabs(gru.best_score_)]).reshape(1, -1))[0][0]
+    logger.log(f'Found best GRU model with params {gru.best_params_} and score {score}', 3)
+
+    return gru.best_params_, score
 
 
 def estimate_arima(y, distance):
@@ -421,10 +424,10 @@ def direct_parameter_estimation(x, y):
     params = dict()
     scores = dict()
 
-    params['knn'], scores['knn'] = estimate_knn(x, y)
-    params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
-    params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
-    params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
+    #params['knn'], scores['knn'] = estimate_knn(x, y)
+    #params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
+    #params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
+    #params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
     params['gru'], scores['gru'] = estimate_gru(x, y, len(x.columns))
 
     return params, scores
@@ -441,10 +444,10 @@ def timebased_parameter_estimation(y, distance, rate):
     params = dict()
     scores = dict()
 
-    params['ets'], scores['ets'] = estimate_ets(y, distance)
-    params['arima'], scores['arima'] = estimate_arima(y, distance)
-    scores['prophet'] = estimate_prophet(y, distance, rate)
-    params['prophet'] = dict()
+    #params['ets'], scores['ets'] = estimate_ets(y, distance)
+    #params['arima'], scores['arima'] = estimate_arima(y, distance)
+    #scores['prophet'] = estimate_prophet(y, distance, rate)
+    #params['prophet'] = dict()
 
     return params, scores
 
