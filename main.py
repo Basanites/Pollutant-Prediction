@@ -10,7 +10,6 @@ multiprocessing.set_start_method('forkserver')
 
 import numpy as np
 import pandas as pd
-import math
 from fbprophet import Prophet
 from joblib import Parallel, delayed
 from pyramid.arima import auto_arima
@@ -350,7 +349,7 @@ def estimate_arima(y, distance):
     logger.log('Finding best ARIMA parameters', 3)
     start = time.time()
     model = auto_arima(y, start_p=1, start_q=1, max_p=4, max_q=4, error_action='ignore',
-                       suppress_warnings=True, stepwise=True, out_of_sample_size=distance, scoring='mse')
+                       suppress_warnings=True, stepwise=False, n_jobs=-1, out_of_sample_size=distance, scoring='mse')
     prediction = model.predict(distance)
     mse = mean_squared_error(y[-distance:], prediction)
     runtime = time.time() - start
