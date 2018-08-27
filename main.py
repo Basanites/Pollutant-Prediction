@@ -77,6 +77,16 @@ def create_gru(weights, input_shape, dropout_rate, learning_rate):
     return model
 
 
+def scale_array(array, feature_range=(-1, 1)):
+    x = array
+    x = x.reshape(len(x), 1)
+    scaler = MinMaxScaler(feature_range=feature_range)
+    scaler = scaler.fit(x)
+    scaled = scaler.transform(x)
+    scaled = scaled.reshape(len(scaled))
+    return scaled, scaler
+
+
 def scale_series(series, feature_range=(-1, 1)):
     """
     Downscales a series to given feature_range.
@@ -86,11 +96,7 @@ def scale_series(series, feature_range=(-1, 1)):
     :return:                The scaled series and used scaler
     """
     x = series.values
-    x = x.reshape(len(x), 1)
-    scaler = MinMaxScaler(feature_range=feature_range)
-    scaler = scaler.fit(x)
-    scaled = scaler.transform(x)
-    scaled = scaled.reshape(len(scaled))
+    scaled, scaler = scale_array(x, feature_range)
     scaled_series = pd.Series(data=scaled, index=series.index)
     return scaled_series, scaler
 
@@ -111,6 +117,14 @@ def scale_dataframe(dataframe, feature_range=(-1, 1)):
     return scaled_dataframe, scaler
 
 
+def rescale_array(array, scaler):
+    x = array
+    x = x.reshape(len(x), 1)
+    rescaled = scaler.inverse_transform(x)
+    rescaled = rescaled.reshape(len(rescaled))
+    return rescaled
+
+
 def rescale_series(series, scaler):
     """
     Rescales a series using given scaler.
@@ -120,9 +134,7 @@ def rescale_series(series, scaler):
     :return:        The rescaled series
     """
     x = series.values
-    x = x.reshape(len(x), 1)
-    rescaled = scaler.inverse_transform(x)
-    rescaled = rescaled.reshape(len(rescaled))
+    rescaled = rescale_array(x, scaler)
     rescaled_series = pd.Series(data=rescaled, index=series.index)
     return rescaled_series
 
@@ -268,22 +280,25 @@ def estimate_linear_regression(x, y):
     return linear_regression.best_params_, linear_regression.best_score_
 
 
-def tensorflow_score(estimator, X, y,**kwargs):
+def tensorflow_score(estimator, X, y, scaler, batch_size, **kwargs):
     """
-    Inverses the standard scoring function so sklearn does not optimize the wrong way around.
+    Calculates the negative mse for a Keras model by rescaling the predictions and truths.
 
     :param estimator:   The estimator
-    :param X:           The predicted values
+    :param X:           The input values
     :param y:           The base truth
+    :param scaler:      The scaler to use for rescaling
+    :batch_size:        The batch size to use for inputs
     :param kwargs:      kwargs
     :return:            The inverted loss function
     """
     from keras.models import Sequential
     kwargs = estimator.filter_sk_params(Sequential.evaluate, kwargs)
-    loss = estimator.model.evaluate(X, y, **kwargs)
-    if type(loss) is list:
-        return -loss[0]
-    return -loss
+    prediction = estimator.model.predict(X, batch_size, kwargs)
+    rescaled_prediction = rescale_array(prediction, scaler)
+    rescaled_y = rescale_array(y, scaler)
+    mse = mean_squared_error(rescaled_y, rescaled_prediction)
+    return -mse
 
 
 def estimate_gru(x, y, batch_size):
@@ -314,16 +329,15 @@ def estimate_gru(x, y, batch_size):
                                  'learning_rate': np.linspace(0.001, 0.02, 10, endpoint=True)
                              },
                              cv=TimeSeriesSplit(),
-                             scoring=tensorflow_score,
+                             scoring=lambda estimator, X, y, **kwargs: tensorflow_score(estimator, X, y, y_scaler,
+                                                                                        batch_size, **kwargs),
                              verbose=2,
                              n_jobs=-1,
-                             n_iter=1)
+                             n_iter=20)
     gru.fit(x, y)
+    logger.log(f'Found best GRU model with params {gru.best_params_} and score {gru.best_score_}', 3)
 
-    score = -y_scaler.inverse_transform(np.asarray([math.fabs(gru.best_score_)]).reshape(1, -1))[0][0]
-    logger.log(f'Found best GRU model with params {gru.best_params_} and score {score}', 3)
-
-    return gru.best_params_, score
+    return gru.best_params_, gru.best_score_
 
 
 def estimate_arima(y, distance):
@@ -363,7 +377,7 @@ def estimate_ets(y, distance):
         prediction = prediction[~np.isnan(prediction)]
         mse = mean_squared_error(y[-len(prediction):], prediction)
 
-        return (fit.params, mse)
+        return fit.params, mse
 
     logger.log('Finding best ETS model', 3)
     start = time.time()
@@ -424,10 +438,10 @@ def direct_parameter_estimation(x, y):
     params = dict()
     scores = dict()
 
-    #params['knn'], scores['knn'] = estimate_knn(x, y)
-    #params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
-    #params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
-    #params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
+    # params['knn'], scores['knn'] = estimate_knn(x, y)
+    # params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
+    # params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
+    # params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
     params['gru'], scores['gru'] = estimate_gru(x, y, len(x.columns))
 
     return params, scores
@@ -444,10 +458,10 @@ def timebased_parameter_estimation(y, distance, rate):
     params = dict()
     scores = dict()
 
-    #params['ets'], scores['ets'] = estimate_ets(y, distance)
-    #params['arima'], scores['arima'] = estimate_arima(y, distance)
-    #scores['prophet'] = estimate_prophet(y, distance, rate)
-    #params['prophet'] = dict()
+    # params['ets'], scores['ets'] = estimate_ets(y, distance)
+    # params['arima'], scores['arima'] = estimate_arima(y, distance)
+    # scores['prophet'] = estimate_prophet(y, distance, rate)
+    # params['prophet'] = dict()
 
     return params, scores
 
