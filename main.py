@@ -438,10 +438,10 @@ def direct_parameter_estimation(x, y):
     params = dict()
     scores = dict()
 
-    # params['knn'], scores['knn'] = estimate_knn(x, y)
-    # params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
-    # params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
-    # params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
+    params['knn'], scores['knn'] = estimate_knn(x, y)
+    params['decision_tree'], scores['decision_tree'] = estimate_decision_tree(x, y)
+    params['random_forest'], scores['random_forest'] = estimate_random_forest(x, y)
+    params['linear_regression'], scores['linear_regression'] = estimate_linear_regression(x, y)
     params['gru'], scores['gru'] = estimate_gru(x, y, len(x.columns))
 
     return params, scores
@@ -458,10 +458,10 @@ def timebased_parameter_estimation(y, distance, rate):
     params = dict()
     scores = dict()
 
-    # params['ets'], scores['ets'] = estimate_ets(y, distance)
-    # params['arima'], scores['arima'] = estimate_arima(y, distance)
-    # scores['prophet'] = estimate_prophet(y, distance, rate)
-    # params['prophet'] = dict()
+    params['ets'], scores['ets'] = estimate_ets(y, distance)
+    params['arima'], scores['arima'] = estimate_arima(y, distance)
+    scores['prophet'] = estimate_prophet(y, distance, rate)
+    params['prophet'] = dict()
 
     return params, scores
 
