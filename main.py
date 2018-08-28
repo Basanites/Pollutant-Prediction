@@ -652,32 +652,38 @@ def test_pollutants(dataframe, station, rate):
 
 
 if __name__ == '__main__':
-    logger = Logger('./event.log')
-    datadir = './post'
-    modeldir = './models'
-    statsfile = './stats.csv'
-    files = glob.glob(datadir + '/*.csv')
-    debug_len = 200
-    debug = not sys.gettrace() is None
-    if debug:
-        logger.log(f'Running in debugger, dataframes will be cut to {debug_len} elements')
+    while True:
+        try:
+            logger = Logger('./event.log')
+            datadir = './post'
+            modeldir = './models'
+            statsfile = './stats.csv'
+            files = glob.glob(datadir + '/*.csv')
+            debug_len = 200
+            debug = not sys.gettrace() is None
+            if debug:
+                logger.log(f'Running in debugger, dataframes will be cut to {debug_len} elements')
 
-    if not os.path.exists('./results'):
-        os.makedirs('./results')
+            if not os.path.exists('./results'):
+                os.makedirs('./results')
 
-    file_num = 0
-    for csv in files:
-        file_num += 1
-        logger.log(f'({file_num}/{len(files)})\t\tRunning tests for {csv}')
-        station_name, steprate = get_info(csv, datadir)
-        df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
-            columns=['AirQualityStationEoICode', 'AveragingTime'])
-        df = resample_dataframe(df, steprate)
+            file_num = 0
+            for csv in files:
+                file_num += 1
+                logger.log(f'({file_num}/{len(files)})\t\tRunning tests for {csv}')
+                station_name, steprate = get_info(csv, datadir)
+                df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
+                    columns=['AirQualityStationEoICode', 'AveragingTime'])
+                df = resample_dataframe(df, steprate)
 
-        if len(df > 8760):
-            df = df[:8760]
+                if len(df > 8760):
+                    df = df[:8760]
 
-        if debug:
-            df = df[:debug_len]
+                if debug:
+                    df = df[:debug_len]
 
-        test_pollutants(df, station_name, steprate)
+                test_pollutants(df, station_name, steprate)
+
+            sys.exit(0)
+        except:
+            pass
