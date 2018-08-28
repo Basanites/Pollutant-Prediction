@@ -685,5 +685,7 @@ if __name__ == '__main__':
                 test_pollutants(df, station_name, steprate)
 
             sys.exit(0)
+        except KeyboardInterrupt:
+            sys.exit(1)
         except:
             pass
