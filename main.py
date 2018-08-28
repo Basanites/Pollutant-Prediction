@@ -652,21 +652,21 @@ def test_pollutants(dataframe, station, rate):
 
 
 if __name__ == '__main__':
+    logger = Logger('./event.log')
+    datadir = './post'
+    modeldir = './models'
+    statsfile = './stats.csv'
+    files = glob.glob(datadir + '/*.csv')
+    debug_len = 200
+    debug = not sys.gettrace() is None
+    if debug:
+        logger.log(f'Running in debugger, dataframes will be cut to {debug_len} elements')
+
+    if not os.path.exists('./results'):
+        os.makedirs('./results')
+
     while True:
         try:
-            logger = Logger('./event.log')
-            datadir = './post'
-            modeldir = './models'
-            statsfile = './stats.csv'
-            files = glob.glob(datadir + '/*.csv')
-            debug_len = 200
-            debug = not sys.gettrace() is None
-            if debug:
-                logger.log(f'Running in debugger, dataframes will be cut to {debug_len} elements')
-
-            if not os.path.exists('./results'):
-                os.makedirs('./results')
-
             file_num = 0
             for csv in files:
                 file_num += 1
@@ -688,4 +688,4 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             sys.exit(1)
         except:
-            pass
+            logger.log('Main crashed, restarting')
