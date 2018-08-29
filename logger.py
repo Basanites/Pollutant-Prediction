@@ -9,7 +9,7 @@ class Logger:
             open(log_location, 'x')
         self.log_location = log_location
 
-    def log(self, string, level=0):
+    def log(self, string, level=0, save=True):
         arrow = ''
         for i in range(1, level + 1):
             arrow += '--'
@@ -20,7 +20,8 @@ class Logger:
             output = string
 
         print(output)
-        self.write_to_logfile(output)
+        if save:
+            self.write_to_logfile(output)
 
     def append_file(self, string, location):
         if not os.path.isfile(location):

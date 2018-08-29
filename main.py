@@ -545,7 +545,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
         timebased_params, timebased_scores = timebased_parameter_estimation(series, distance, rate)
         save_results(timebased_params, timebased_scores, save_path)
     else:
-        logger.log('Skipping tests for timebased models because they already exist', 2)
+        logger.log('Skipping tests for timebased models because they already exist', 2, False)
 
     rotated = series[distance:]
     for i in range(1, distance + 1):
@@ -560,7 +560,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
                 save_results(artificial_params, artificial_scores, save_path)
             else:
                 logger.log(f'Skipping tests for direct models on artificial set with distance {i}{rate},'
-                           f' because they already exist', 2)
+                           f' because they already exist', 2, False)
 
             if len(rest.columns.tolist()) > 1:
                 save_path = build_save_string(station, pollutant, i, differenced, True, False)
@@ -570,7 +570,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
                     save_results(direct_params, direct_scores, save_path)
                 else:
                     logger.log(f'Skipping tests for direct models on direct set with distance {i}{rate},'
-                               f' because they already exist', 2)
+                               f' because they already exist', 2, False)
 
 
 def difference_series(series, stepsize=1):
