@@ -458,7 +458,12 @@ def timebased_parameter_estimation(y, distance, rate):
     scores = dict()
 
     params['ets'], scores['ets'] = estimate_ets(y, distance)
-    params['arima'], scores['arima'] = estimate_arima(y, distance)
+    try:
+        params['arima'], scores['arima'] = estimate_arima(y, distance)
+    except ValueError:
+        logger.log(
+            'Skipping ARIMA: Could not successfully fit ARIMA to input data. It is likely your data is non-stationary.',
+            3)
     scores['prophet'] = estimate_prophet(y, distance, rate)
     params['prophet'] = dict()
 
