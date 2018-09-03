@@ -1,0 +1,6 @@
+,index,callback,damping_slope,disp,initial_level,initial_seasons,initial_slope,lamda,maxiter,method,model,order,out_of_sample_size,remove_bias,score,scoring,scoring_args,seasonal_order,smoothing_level,smoothing_seasonal,smoothing_slope,solver,start_params,suppress_warnings,transparams,trend,use_boxcox
+0,0,,0.0,,5.599908398604941,"[ -3.9749084  -2.3259084  -4.0539084  -0.9799084  -4.5359084  -0.4339084
+ -12.6339084  -3.1979084  -6.2439084  -2.9939084  -4.9179084  -4.9179084
+  -5.7789084  -1.2649084  -6.3799084 -12.3079084 -11.5319084  -7.9879084
+  -7.8309084  -6.0259084  -6.7259084  -3.4999084 -15.9149084 -20.7979084]",0.0,,,,ets,,,False,36.45872110659272,,,,0.05263157894736842,0.05263157894736842,0.05263157894736842,,,,,,False
+1,0,,,0.0,,,,,50.0,,arima,"(2, 0, 1)",24.0,,37.00347468256163,mse,{},"(0, 0, 0, 1)",,,,lbfgs,,True,True,c,

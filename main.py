@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 from fbprophet import Prophet
 from joblib import Parallel, delayed
-from pyramid.arima import auto_arima
+from pyramid.arima import auto_arima, ARIMA
 from sklearn import neighbors, ensemble, tree, linear_model
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, TimeSeriesSplit
