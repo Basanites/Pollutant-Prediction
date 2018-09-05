@@ -544,7 +544,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
     rest = dataframe.drop(columns=[pollutant])[distance:]
     artificial = create_artificial_features(series, rate, steps=distance)[distance:]
 
-    save_path = build_save_string(station, pollutant, distance, differenced, False, artificial)
+    save_path = build_save_string(station, pollutant, distance, differenced, False, artificial, rate)
     if not os.path.exists(save_path):
         logger.log('Running tests for timebased models', 2)
         timebased_params, timebased_scores = timebased_parameter_estimation(series, distance, rate)
