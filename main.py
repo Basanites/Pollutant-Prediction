@@ -507,7 +507,7 @@ def save_results(params, scores, savepath):
     dataframe.to_csv(savepath)
 
 
-def build_save_string(station, pollutant, distance, differenced, direct, artificial):
+def build_save_string(station, pollutant, distance, differenced, direct, artificial, rate):
     """
     Builds the save location string for the given inputs.
     The filetype will be a csv file.
@@ -520,7 +520,7 @@ def build_save_string(station, pollutant, distance, differenced, direct, artific
     :param artificial:  If the forecast used the artificial set or other pollutants
     :return:            The save location string
     """
-    savepath = f'./results/{station}-{pollutant}-distance={distance}-differenced={differenced}-direct={direct}'
+    savepath = f'./results/{station}-{rate}-{pollutant}-distance={distance}-differenced={differenced}-direct={direct}'
     if direct:
         savepath += f'-artificial={artificial}'
     savepath += '.csv'
