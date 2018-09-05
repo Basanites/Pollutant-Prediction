@@ -1,0 +1,6 @@
+,index,batch_size,dropout_rate,epochs,input_shape,learning_rate,max_depth,model,n_estimators,n_neighbors,normalize,score,weights
+0,0,,,,,,,knn,,42.0,,-0.018084933729809995,uniform
+1,0,,,,,,3.0,decision_tree,,,,-0.01850605914318416,
+2,0,,,,,,5.0,random_forest,20.0,,,-0.01773377473001942,
+3,0,,,,,,,linear_regression,,,False,-0.01792088173699085,
+4,0,4.0,0.2,4.0,"(4, 1)",0.015777777777777776,,gru,,,,-0.014323356945740913,16
