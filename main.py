@@ -358,7 +358,7 @@ def estimate_arima(y, distance):
     return model.get_params(), mse
 
 
-def estimate_ets(y, distance):
+def estimate_ets(y, distance, rate):
     """
     Estimates the best parameters for ETS prediction of series y
 
@@ -369,14 +369,21 @@ def estimate_ets(y, distance):
 
     def get_ets_stats(trend, season, damped, box_cox):
         print(f'running ets trend={trend}, damped={damped}, season={season}, box_cox={box_cox}')
-        model = ExponentialSmoothing(y[:-distance], trend=trend, seasonal=season, damped=damped,
-                                     seasonal_periods=distance)
+        model = ExponentialSmoothing(input, trend=trend, seasonal=season, damped=damped,
+                                     seasonal_periods=seasonal_periods)
         fit = model.fit(use_boxcox=box_cox)
         prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
         prediction = prediction[~np.isnan(prediction)]
         mse = mean_squared_error(y[-len(prediction):], prediction)
 
         return fit.params, mse
+
+    if rate == 'H':
+        input = y[:-(distance * 7)]
+        seasonal_periods = int(len(input) / (24 * 7))
+    else:
+        input = y[:-distance]
+        seasonal_periods = int(len(input) / 7)
 
     logger.log('Finding best ETS model', 3)
     start = time.time()
@@ -457,7 +464,7 @@ def timebased_parameter_estimation(y, distance, rate):
     params = dict()
     scores = dict()
 
-    params['ets'], scores['ets'] = estimate_ets(y, distance)
+    params['ets'], scores['ets'] = estimate_ets(y, distance, rate)
     try:
         params['arima'], scores['arima'] = estimate_arima(y, distance)
     except ValueError:
