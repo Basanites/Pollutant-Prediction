@@ -369,7 +369,7 @@ def estimate_ets(y, distance, rate):
 
     def get_ets_stats(trend, season, damped, box_cox):
         print(f'running ets trend={trend}, damped={damped}, season={season}, box_cox={box_cox}')
-        model = ExponentialSmoothing(input, trend=trend, seasonal=season, damped=damped,
+        model = ExponentialSmoothing(fitting, trend=trend, seasonal=season, damped=damped,
                                      seasonal_periods=seasonal_periods)
         fit = model.fit(use_boxcox=box_cox)
         prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
@@ -379,11 +379,11 @@ def estimate_ets(y, distance, rate):
         return fit.params, mse
 
     if rate == 'H':
-        input = y[:-(distance * 7)]
-        seasonal_periods = int(len(input) / (24 * 7))
+        fitting = y[:-(distance * 7)]
+        seasonal_periods = int(len(fitting) / (24 * 7))
     else:
-        input = y[:-distance]
-        seasonal_periods = int(len(input) / 7)
+        fitting = y[:-distance]
+        seasonal_periods = int(len(fitting) / 7)
 
     logger.log('Finding best ETS model', 3)
     start = time.time()
@@ -565,7 +565,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
 
         # only use specific predefined forecast distances.
         if i in use_values:
-            save_path = build_save_string(station, pollutant, i, differenced, True, True)
+            save_path = build_save_string(station, pollutant, i, differenced, True, True, rate)
             if not os.path.exists(save_path):
                 logger.log(f'Running tests for direct models on artificial set with distance {i}{rate}', 2)
                 artificial_params, artificial_scores = direct_parameter_estimation(artificial[:-i], rotated)
@@ -575,7 +575,7 @@ def model_testing(dataframe, pollutant, station, rate, differenced):
                            f' because they already exist', 2, False)
 
             if len(rest.columns.tolist()) > 1:
-                save_path = build_save_string(station, pollutant, i, differenced, True, False)
+                save_path = build_save_string(station, pollutant, i, differenced, True, False, rate)
                 if not os.path.exists(save_path):
                     logger.log(f'Running tests for direct models on direct set with distance {i}{rate}', 2)
                     direct_params, direct_scores = direct_parameter_estimation(rest[:-i], rotated)
