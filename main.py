@@ -1,3 +1,4 @@
+import calendar
 import glob
 import os
 import sys
@@ -12,7 +13,7 @@ import numpy as np
 import pandas as pd
 from fbprophet import Prophet
 from joblib import Parallel, delayed
-from pyramid.arima import auto_arima, ARIMA
+from pyramid.arima import auto_arima
 from sklearn import neighbors, ensemble, tree, linear_model
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV, TimeSeriesSplit
@@ -20,7 +21,59 @@ from sklearn.preprocessing import MinMaxScaler
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 from logger import Logger
-from timeseries.predictions import create_artificial_features
+
+
+def create_artificial_features(series, frequency='H', steps=7, weekdays=False, months=False, statistical=True):
+    """
+    Creates artificial features for a given series with Timestamp Index
+
+    :param series:      the base series to use
+    :param frequency:   the frequency of values in the series
+    :param steps:       the amount of steps to lag the series by
+    :return:            the dataframe containing the artificial features for the input series
+    """
+    # interpolated = series.interpolate(method='time', frequency=frequency)
+    lagged = create_lagged_features(series, frequency, steps)
+    statistics = lagged
+
+    if statistical:
+        statistics['sum'] = lagged.sum(axis=1)
+        statistics['mean'] = lagged.mean(axis=1)
+        statistics['median'] = lagged.median(axis=1)
+
+    if weekdays:
+        weekdays_df = pd.get_dummies(lagged.index.weekday_name)
+        weekdays_df = weekdays_df.applymap(lambda x: bool(x))
+        weekdays_df.index = lagged.index
+        statistics = statistics.join(weekdays_df)
+
+    if months:
+        months_df = pd.get_dummies(lagged.index.month.map(lambda x: calendar.month_abbr[x]))
+        months_df = months_df.applymap(lambda x: bool(x))
+        months_df.index = lagged.index
+        statistics = statistics.join(months_df)
+
+    return statistics
+
+
+def create_lagged_features(series, frequency='H', steps=7):
+    """
+    Creates a dataframe from a series containing the original series and the lagged values for the specified amount of
+    steps.
+
+    :param series:      the series to use
+    :param frequency:   the frequency of the values by which to shift
+    :param steps:       the amount of steps to shift
+    :return:            the shifted dataframe
+    """
+    lagged = pd.DataFrame()
+
+    for i in range(1, steps + 1):
+        lagged['lag {}{}'.format(i, frequency)] = series.shift(i, freq=frequency)
+
+    lagged.index = series.index
+
+    return lagged.interpolate()
 
 
 def resample_dataframe(dataframe, rate='H'):
@@ -48,9 +101,9 @@ def get_info(csv_path, directory):
     :return:            The station name and rate
     """
     info = csv_path.replace(f'{directory}/', '').replace('.csv', '').split('-')
-    station_name = info[0]
+    station = info[0]
     rate = {'day': 'D', 'hour': 'H'}[info[-1]]
-    return station_name, rate
+    return station, rate
 
 
 def create_gru(weights, input_shape, dropout_rate, learning_rate):
@@ -279,13 +332,14 @@ def estimate_linear_regression(x, y):
     return linear_regression.best_params_, linear_regression.best_score_
 
 
-def tensorflow_score(estimator, X, y, scaler, batch_size, **kwargs):
+def tensorflow_score(estimator, x, y, scaler, batch_size, **kwargs):
     """
     Calculates the negative mse for a Keras model by rescaling the predictions and truths.
 
     :param estimator:   The estimator
-    :param X:           The input values
+    :param x:           The input values
     :param y:           The base truth
+    :param batch_size:  The batch size used as input length for training
     :param scaler:      The scaler to use for rescaling
     :batch_size:        The batch size to use for inputs
     :param kwargs:      kwargs
@@ -293,7 +347,7 @@ def tensorflow_score(estimator, X, y, scaler, batch_size, **kwargs):
     """
     from keras.models import Sequential
     kwargs = estimator.filter_sk_params(Sequential.evaluate, kwargs)
-    prediction = estimator.model.predict(X, batch_size, kwargs)
+    prediction = estimator.model.predict(x, batch_size, kwargs)
     rescaled_prediction = rescale_array(prediction, scaler)
     rescaled_y = rescale_array(y, scaler)
     mse = mean_squared_error(rescaled_y, rescaled_prediction)
@@ -364,6 +418,7 @@ def estimate_ets(y, distance, rate):
 
     :param y:           The series to predict
     :param distance:    The amount of steps to predict
+    :param rate:        The sampling rate used (D/H)
     :return:
     """
 
@@ -525,6 +580,7 @@ def build_save_string(station, pollutant, distance, differenced, direct, artific
     :param differenced: If the dataframe was differenced
     :param direct:      If the forecast uses a direct model
     :param artificial:  If the forecast used the artificial set or other pollutants
+    :param rate:        The used sampling rate (D/H)
     :return:            The save location string
     """
     savepath = f'./results/{station}-{rate}-{pollutant}-distance={distance}-differenced={differenced}-direct={direct}'
