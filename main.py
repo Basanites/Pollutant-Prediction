@@ -372,7 +372,7 @@ def estimate_ets(y, distance, rate):
         model = ExponentialSmoothing(fitting, trend=trend, seasonal=season, damped=damped,
                                      seasonal_periods=seasonal_periods)
         fit = model.fit(use_boxcox=box_cox)
-        prediction = fit.predict(start=len(y[:-distance]), end=len(y) - 1)
+        prediction = fit.forecast(distance)
         prediction = prediction[~np.isnan(prediction)]
         mse = mean_squared_error(y[-len(prediction):], prediction)
 
