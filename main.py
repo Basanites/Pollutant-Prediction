@@ -30,6 +30,8 @@ def create_artificial_features(series, frequency='H', steps=7, weekdays=False, m
     :param series:      the base series to use
     :param frequency:   the frequency of values in the series
     :param steps:       the amount of steps to lag the series by
+    :param weekdays:    add one hot encoding for weekdays
+    :param months:      add one hot encoding for months
     :return:            the dataframe containing the artificial features for the input series
     """
     # interpolated = series.interpolate(method='time', frequency=frequency)
