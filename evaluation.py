@@ -1,6 +1,7 @@
 import glob
 import re
 import sys
+import time
 
 import numpy as np
 import pandas as pd
@@ -170,11 +171,16 @@ def evaluate_knn(row, x, y, distance):
     """
     used_x = x[:-distance]
     used_y = y[:-distance]
-
     params = get_knn_params(row)
+
+    start = time.clock()
     model = neighbors.KNeighborsRegressor(**params)
     fit = model.fit(used_x, used_y)
+    fit_time = time.clock() - start
+
+    start = time.clock()
     prediction = fit.predict(x[-distance:])
+    prediction_time = time.clock() - start
 
 
 def evaluate_decision_tree(row, x, y, distance):
@@ -189,11 +195,16 @@ def evaluate_decision_tree(row, x, y, distance):
     """
     used_x = x[:-distance]
     used_y = y[:-distance]
-
     params = get_decision_tree_params(row)
+
+    start = time.clock()
     model = tree.DecisionTreeRegressor(**params)
     fit = model.fit(used_x, used_y)
+    fit_time = time.clock() - start
+
+    start = time.clock()
     prediction = fit.predict(x[-distance:])
+    prediction_time = time.clock() - start
 
 
 def evaluate_random_forest(row, x, y, distance):
@@ -208,11 +219,16 @@ def evaluate_random_forest(row, x, y, distance):
     """
     used_x = x[:-distance]
     used_y = y[:-distance]
-
     params = get_random_forest_params(row)
+
+    start = time.clock()
     model = ensemble.RandomForestRegressor(**params)
     fit = model.fit(used_x, used_y)
+    fit_time = time.clock() - start
+
+    start = time.clock()
     prediction = fit.predict(x[-distance:])
+    prediction_time = time.clock() - start
 
 
 def evaluate_linear_regression(row, x, y, distance):
@@ -227,11 +243,16 @@ def evaluate_linear_regression(row, x, y, distance):
     """
     used_x = x[:-distance]
     used_y = y[:-distance]
-
     params = get_linear_regression_params(row)
+
+    start = time.clock()
     model = linear_model.LinearRegression(**params)
     fit = model.fit(used_x, used_y)
+    fit_time = time.clock() - start
+
+    start = time.clock()
     prediction = fit.predict(x[-distance:])
+    prediction_time = time.clock() - start
 
 
 def evaluate_gru(row, x, y, distance):
@@ -251,11 +272,16 @@ def evaluate_gru(row, x, y, distance):
     scaled_y = scaled_y.values
     used_x = scaled_x[:-distance]
     used_y = scaled_y[:-distance]
-
     params = get_gru_params(row)
+
+    start = time.clock()
     model = KerasRegressor(build_fn=create_gru, **params)
     fit = model.fit(used_x, used_y)
+    fit_time = time.clock() - start
+
+    start = time.clock()
     prediction = rescale_array(model.predict(scaled_x[-distance:]), y_scaler)
+    prediction_time = time.clock() - start
 
 
 def evaluate_ets(row, y, distance, rate):
@@ -270,12 +296,17 @@ def evaluate_ets(row, y, distance, rate):
     """
     used_y = y[:-distance]
     periods = int(len(used_y) / rate)
-
-    model = ExponentialSmoothing(used_y, trend='add', seasonal_periods=periods, seasonal='add')
     params = get_ets_params(row)
+
+    start = time.clock()
+    model = ExponentialSmoothing(used_y, trend='add', seasonal_periods=periods, seasonal='add')
     model.params = params
     fit = model.fit()
+    fit_time = time.clock() - start
+
+    start = time.clock()
     prediction = fit.forecast(distance)
+    prediction_time = time.clock() - start
 
 
 def evaluate_arima(row, y, distance):
@@ -288,11 +319,16 @@ def evaluate_arima(row, y, distance):
     :return:
     """
     used_y = y[:-distance]
-
     params = get_arima_params(row)
+
+    start = time.clock()
     model = ARIMA(**params)
     fit = model.fit(y=used_y)
+    fit_time = time.clock() - start
+
+    start = time.clock()
     prediction = fit.predict(distance)
+    prediction_time = time.clock() - start
 
 
 def evaluate_prophet(y, distance, rate):
@@ -306,13 +342,18 @@ def evaluate_prophet(y, distance, rate):
     """
     used_y = y[:-distance]
 
+    start = time.clock()
     prophet = Prophet().fit(pd.DataFrame(data={
         'ds': used_y.index,
         'y': used_y
     }))
+    fit_time = time.clock() - start
+
+    start = time.clock()
     future = prophet.make_future_dataframe(distance, rate)
     complete_prediction = prophet.predict(future)
     prediction = complete_prediction['yhat'][-distance:]
+    prediction_time = time.clock() - start
 
 
 def _evaluate_best_params():
@@ -344,7 +385,6 @@ def _evaluate_best_params():
         stats_df = stats_df.reset_index().drop(columns=['level_0'])
         best_stats_df = pd.DataFrame()
         # TODO: save stats accordingly to df
-
 
         for idx, r in stats_df.iterrows():
             pollutant, distance, differenced, direct, artificial, model = r['pollutant'], int(r['distance']), r[
