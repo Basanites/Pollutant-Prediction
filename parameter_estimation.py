@@ -721,12 +721,36 @@ def test_pollutants(dataframe, station, rate):
         model_testing(difference_dataframe(dataframe), pollutant, station, rate, True)
 
 
+def find_best_params(data_dir):
+    """
+    Find best params for all models using data from the given datadir
+
+    :param data_dir:    The directory containing the converted eea csvs
+    """
+    files = glob.glob(data_dir + '/*.csv')
+    file_num = 0
+    for csv in files:
+        file_num += 1
+        logger.log(f'({file_num}/{len(files)})\t\tRunning tests for {csv}')
+        station_name, steprate = get_info(csv, datadir)
+        df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
+            columns=['AirQualityStationEoICode', 'AveragingTime'])
+        df = resample_dataframe(df, steprate)
+
+        if len(df > 8760):
+            df = df[:8760]
+
+        if debug:
+            df = df[:debug_len]
+
+        test_pollutants(df, station_name, steprate)
+
 if __name__ == '__main__':
     logger = Logger('./event.log')
     datadir = './post'
     modeldir = './models'
     statsfile = './stats.csv'
-    files = glob.glob(datadir + '/*.csv')
+
     debug_len = 200
     debug = not sys.gettrace() is None
     if debug:
@@ -737,23 +761,7 @@ if __name__ == '__main__':
 
     while True:
         try:
-            file_num = 0
-            for csv in files:
-                file_num += 1
-                logger.log(f'({file_num}/{len(files)})\t\tRunning tests for {csv}')
-                station_name, steprate = get_info(csv, datadir)
-                df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
-                    columns=['AirQualityStationEoICode', 'AveragingTime'])
-                df = resample_dataframe(df, steprate)
-
-                if len(df > 8760):
-                    df = df[:8760]
-
-                if debug:
-                    df = df[:debug_len]
-
-                test_pollutants(df, station_name, steprate)
-
+            find_best_params(datadir, logger)
             sys.exit(0)
         except KeyboardInterrupt:
             sys.exit(1)
