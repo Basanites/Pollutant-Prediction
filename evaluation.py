@@ -8,6 +8,8 @@ import pandas as pd
 from fbprophet import Prophet
 from pyramid.arima import ARIMA
 from sklearn import neighbors, ensemble, tree, linear_model
+from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_squared_log_error, median_absolute_error, \
+    r2_score, explained_variance_score
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 from main import create_gru, resample_dataframe, difference_dataframe, create_artificial_features, rotate_series, \
@@ -159,6 +161,15 @@ def get_gru_params(row):
     return params_dict
 
 
+def score_prediction(actual, predicted):
+    return {'mean_squared_error': mean_squared_error(actual, predicted),
+            'mean_squared_log_error': mean_squared_log_error(actual, predicted),
+            'mean_absolute_error': mean_absolute_error(actual, predicted),
+            'median_absolute_error': median_absolute_error(actual, predicted),
+            'r2': r2_score(actual, predicted),
+            'explained_variance': explained_variance_score(actual, predicted)}
+
+
 def evaluate_knn(row, x, y, distance):
     """
     Evaluate the model with the params given in the row
@@ -172,15 +183,20 @@ def evaluate_knn(row, x, y, distance):
     used_x = x[:-distance]
     used_y = y[:-distance]
     params = get_knn_params(row)
+    times = dict()
 
     start = time.clock()
     model = neighbors.KNeighborsRegressor(**params)
     fit = model.fit(used_x, used_y)
-    fit_time = time.clock() - start
+    times['fit_time'] = time.clock() - start
 
     start = time.clock()
     prediction = fit.predict(x[-distance:])
-    prediction_time = time.clock() - start
+    times['prediction_time'] = time.clock() - start
+
+    scores = score_prediction(y[-distance:], prediction)
+
+    return {**times, **scores}
 
 
 def evaluate_decision_tree(row, x, y, distance):
@@ -196,15 +212,20 @@ def evaluate_decision_tree(row, x, y, distance):
     used_x = x[:-distance]
     used_y = y[:-distance]
     params = get_decision_tree_params(row)
+    times = dict()
 
     start = time.clock()
     model = tree.DecisionTreeRegressor(**params)
     fit = model.fit(used_x, used_y)
-    fit_time = time.clock() - start
+    times['fit_time'] = time.clock() - start
 
     start = time.clock()
     prediction = fit.predict(x[-distance:])
-    prediction_time = time.clock() - start
+    times['prediction_time'] = time.clock() - start
+
+    scores = score_prediction(y[-distance:], prediction)
+
+    return {**times, **scores}
 
 
 def evaluate_random_forest(row, x, y, distance):
@@ -220,15 +241,20 @@ def evaluate_random_forest(row, x, y, distance):
     used_x = x[:-distance]
     used_y = y[:-distance]
     params = get_random_forest_params(row)
+    times = dict()
 
     start = time.clock()
     model = ensemble.RandomForestRegressor(**params)
     fit = model.fit(used_x, used_y)
-    fit_time = time.clock() - start
+    times['fit_time'] = time.clock() - start
 
     start = time.clock()
     prediction = fit.predict(x[-distance:])
-    prediction_time = time.clock() - start
+    times['prediction_time'] = time.clock() - start
+
+    scores = score_prediction(y[-distance:], prediction)
+
+    return {**times, **scores}
 
 
 def evaluate_linear_regression(row, x, y, distance):
@@ -244,15 +270,20 @@ def evaluate_linear_regression(row, x, y, distance):
     used_x = x[:-distance]
     used_y = y[:-distance]
     params = get_linear_regression_params(row)
+    times = dict()
 
     start = time.clock()
     model = linear_model.LinearRegression(**params)
     fit = model.fit(used_x, used_y)
-    fit_time = time.clock() - start
+    times['fit_time'] = time.clock() - start
 
     start = time.clock()
     prediction = fit.predict(x[-distance:])
-    prediction_time = time.clock() - start
+    times['prediction_time'] = time.clock() - start
+
+    scores = score_prediction(y[-distance:], prediction)
+
+    return {**times, **scores}
 
 
 def evaluate_gru(row, x, y, distance):
@@ -273,15 +304,20 @@ def evaluate_gru(row, x, y, distance):
     used_x = scaled_x[:-distance]
     used_y = scaled_y[:-distance]
     params = get_gru_params(row)
+    times = dict()
 
     start = time.clock()
     model = KerasRegressor(build_fn=create_gru, **params)
     fit = model.fit(used_x, used_y)
-    fit_time = time.clock() - start
+    times['fit_time'] = time.clock() - start
 
     start = time.clock()
     prediction = rescale_array(model.predict(scaled_x[-distance:]), y_scaler)
-    prediction_time = time.clock() - start
+    times['prediction_time'] = time.clock() - start
+
+    scores = score_prediction(y[-distance:], prediction)
+
+    return {**times, **scores}
 
 
 def evaluate_ets(row, y, distance, rate):
@@ -297,16 +333,21 @@ def evaluate_ets(row, y, distance, rate):
     used_y = y[:-distance]
     periods = int(len(used_y) / rate)
     params = get_ets_params(row)
+    times = dict()
 
     start = time.clock()
     model = ExponentialSmoothing(used_y, trend='add', seasonal_periods=periods, seasonal='add')
     model.params = params
     fit = model.fit()
-    fit_time = time.clock() - start
+    times['fit_time'] = time.clock() - start
 
     start = time.clock()
     prediction = fit.forecast(distance)
-    prediction_time = time.clock() - start
+    times['prediction_time'] = time.clock() - start
+
+    scores = score_prediction(y[-distance:], prediction)
+
+    return {**times, **scores}
 
 
 def evaluate_arima(row, y, distance):
@@ -320,15 +361,20 @@ def evaluate_arima(row, y, distance):
     """
     used_y = y[:-distance]
     params = get_arima_params(row)
+    times = dict()
 
     start = time.clock()
     model = ARIMA(**params)
     fit = model.fit(y=used_y)
-    fit_time = time.clock() - start
+    times['fit_time'] = time.clock() - start
 
     start = time.clock()
     prediction = fit.predict(distance)
-    prediction_time = time.clock() - start
+    times['prediction_time'] = time.clock() - start
+
+    scores = score_prediction(y[-distance:], prediction)
+
+    return {**times, **scores}
 
 
 def evaluate_prophet(y, distance, rate):
@@ -341,19 +387,24 @@ def evaluate_prophet(y, distance, rate):
     :return:
     """
     used_y = y[:-distance]
+    times = dict()
 
     start = time.clock()
     prophet = Prophet().fit(pd.DataFrame(data={
         'ds': used_y.index,
         'y': used_y
     }))
-    fit_time = time.clock() - start
+    times['fit_time'] = time.clock() - start
 
     start = time.clock()
     future = prophet.make_future_dataframe(distance, rate)
     complete_prediction = prophet.predict(future)
     prediction = complete_prediction['yhat'][-distance:]
-    prediction_time = time.clock() - start
+    times['prediction_time'] = time.clock() - start
+
+    scores = score_prediction(y[-distance:], prediction)
+
+    return {**times, **scores}
 
 
 def _evaluate_best_params():
@@ -370,7 +421,7 @@ def _evaluate_best_params():
             data_df = data_df[:debug_len]
 
         data_df = resample_dataframe(data_df, rate)
-        difference_df = difference_dataframe(data_df)
+        differenced_df = difference_dataframe(data_df)
 
         stats_df = pd.DataFrame()
         for result in results:
@@ -391,7 +442,7 @@ def _evaluate_best_params():
                 'differenced'], r['direct'], r['artificial'], r['model']
 
             if differenced:
-                used_df = differenced
+                used_df = differenced_df
             else:
                 used_df = data_df
             series = used_df[pollutant]
