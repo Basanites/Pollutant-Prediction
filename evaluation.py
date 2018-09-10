@@ -414,7 +414,7 @@ def evaluate_prophet(y, distance, rate):
     return {**times, **scores}
 
 
-def evaluate_best_params(resources, results_folder, debugging=False):
+def evaluate_best_params(resources, results_folder, evaluation_folder, debugging=False):
     """
     Runs evaluation of the found best parameters using the matching csvs
 
@@ -450,7 +450,6 @@ def evaluate_best_params(resources, results_folder, debugging=False):
 
         stats_df = stats_df.reset_index().drop(columns=['level_0'])
         best_stats_df = pd.DataFrame()
-        # TODO: save stats accordingly to df
 
         for idx, r in stats_df.iterrows():
             pollutant, distance, differenced, direct, artificial, model = r['pollutant'], int(r['distance']), r[
@@ -477,22 +476,36 @@ def evaluate_best_params(resources, results_folder, debugging=False):
                     y = rotated
 
                 if model == 'knn':
-                    evaluate_knn(r, x, y, distance)
+                    scoring = evaluate_knn(r, x, y, distance)
                 elif model == 'decision_tree':
-                    evaluate_decision_tree(r, x, y, distance)
+                    scoring = evaluate_decision_tree(r, x, y, distance)
                 elif model == 'random_forest':
-                    evaluate_random_forest(r, x, y, distance)
+                    scoring = evaluate_random_forest(r, x, y, distance)
                 elif model == 'linear_regression':
-                    evaluate_linear_regression(r, x, y, distance)
+                    scoring = evaluate_linear_regression(r, x, y, distance)
                 elif model == 'gru':
-                    evaluate_gru(r, x, y, distance)
+                    scoring = evaluate_gru(r, x, y, distance)
+                else:
+                    scoring = False
             else:
                 if model == 'arima':
-                    evaluate_arima(r, series, distance)
+                    scoring = evaluate_arima(r, series, distance)
                 elif model == 'ets':
-                    evaluate_ets(r, series, distance, rate)
+                    scoring = evaluate_ets(r, series, distance, rate)
                 elif model == 'prophet':
-                    evaluate_prophet(series, distance, rate)
+                    scoring = evaluate_prophet(series, distance, rate)
+                else:
+                    scoring = False
+
+            if scoring:
+                best_stats_df.append({'model': model,
+                                      'differenced': differenced,
+                                      'distance': distance,
+                                      'artificial': artificial,
+                                      'pollutant': pollutant,
+                                      **scoring})
+
+        best_stats_df.to_csv(f'{evaluation_folder}/{station}-{rate}')
 
 
 if __name__ == '__main__':
@@ -501,5 +514,6 @@ if __name__ == '__main__':
 
     resource_loc = 'post'
     results_loc = 'results'
+    evaluation_loc = 'eval'
     models = ['knn', 'decision_tree', 'random_forest', 'linear_regression', 'gru', 'ets', 'arima', 'prophet']
-    evaluate_best_params(resource_loc, results_loc, debug)
+    evaluate_best_params(resource_loc, results_loc, evaluation_loc, debug)
