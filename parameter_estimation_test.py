@@ -2,7 +2,7 @@ import math
 
 import pandas as pd
 
-from main import resample_dataframe, get_info, scale_series, rescale_series, scale_dataframe, rescale_dataframe, \
+from parameter_estimation import resample_dataframe, get_info, scale_series, rescale_series, scale_dataframe, rescale_dataframe, \
     difference_series, dedifference_series, difference_dataframe, dediffference_dataframe
 
 

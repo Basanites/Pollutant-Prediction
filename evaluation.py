@@ -12,7 +12,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_square
     r2_score, explained_variance_score
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
-from main import create_gru, resample_dataframe, difference_dataframe, create_artificial_features, rotate_series, \
+from parameter_estimation import create_gru, resample_dataframe, difference_dataframe, create_artificial_features, rotate_series, \
     scale_inputs, rescale_array
 
 
