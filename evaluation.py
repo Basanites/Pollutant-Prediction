@@ -418,9 +418,11 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, debugging
     """
     Runs evaluation of the found best parameters using the matching csvs
 
-    :param resources:       The folder name of the converted eea weatherdata csv files
-    :param results_folder:  The folder name in which the parameter estimation results are contained
-    :param debugging:       If debugging mode should be enabled (restricts used input length to 200 items per series)
+    :param resources:           The folder name of the converted eea weatherdata csv files
+    :param results_folder:      The folder name in which the parameter estimation results are contained
+    :param evaluation_folder:   The folder name to save evaluation results to
+    :param debugging:           If debugging mode should be enabled
+                                (restricts used input length to 200 items per series)
     """
     for csv in glob.glob(f'{resources}/*.csv'):
         station, rate = csv.replace(f'{resources}/', '').replace('.csv', '').replace('day', 'D').replace('hour',
