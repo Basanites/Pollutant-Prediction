@@ -1,4 +1,5 @@
 import glob
+import os
 import re
 import sys
 import time
@@ -12,7 +13,8 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_square
     r2_score, explained_variance_score
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
-from parameter_estimation import create_gru, resample_dataframe, difference_dataframe, create_artificial_features, rotate_series, \
+from parameter_estimation import create_gru, resample_dataframe, difference_dataframe, create_artificial_features, \
+    rotate_series, \
     scale_inputs, rescale_array
 
 
@@ -517,5 +519,9 @@ if __name__ == '__main__':
     resource_loc = 'post'
     results_loc = 'results'
     evaluation_loc = 'eval'
+
+    if not os.path.exists(f'./{evaluation_loc}'):
+        os.makedirs(f'./{evaluation_loc}')
+
     models = ['knn', 'decision_tree', 'random_forest', 'linear_regression', 'gru', 'ets', 'arima', 'prophet']
     evaluate_best_params(resource_loc, results_loc, evaluation_loc, debug)
