@@ -162,6 +162,13 @@ def get_gru_params(row):
 
 
 def score_prediction(actual, predicted):
+    """
+    Returns all possible regression scores for the given timeseries'
+
+    :param actual:      The expected timeseries values
+    :param predicted:   The predicted timeseries values
+    :return:            The dict containing the scores
+    """
     return {'mean_squared_error': mean_squared_error(actual, predicted),
             'mean_squared_log_error': mean_squared_log_error(actual, predicted),
             'mean_absolute_error': mean_absolute_error(actual, predicted),
@@ -408,6 +415,13 @@ def evaluate_prophet(y, distance, rate):
 
 
 def evaluate_best_params(resources, results_folder, debugging=False):
+    """
+    Runs evaluation of the found best parameters using the matching csvs
+
+    :param resources:       The folder name of the converted eea weatherdata csv files
+    :param results_folder:  The folder name in which the parameter estimation results are contained
+    :param debugging:       If debugging mode should be enabled (restricts used input length to 200 items per series)
+    """
     for csv in glob.glob(f'{resources}/*.csv'):
         station, rate = csv.replace(f'{resources}/', '').replace('.csv', '').replace('day', 'D').replace('hour',
                                                                                                          'H').split('-')
