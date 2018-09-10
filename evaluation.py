@@ -407,7 +407,7 @@ def evaluate_prophet(y, distance, rate):
     return {**times, **scores}
 
 
-def _evaluate_best_params(resources, results_folder, debugging=False):
+def evaluate_best_params(resources, results_folder, debugging=False):
     for csv in glob.glob(f'{resources}/*.csv'):
         station, rate = csv.replace(f'{resources}/', '').replace('.csv', '').replace('day', 'D').replace('hour',
                                                                                                          'H').split('-')
@@ -488,4 +488,4 @@ if __name__ == '__main__':
     resource_loc = 'post'
     results_loc = 'results'
     models = ['knn', 'decision_tree', 'random_forest', 'linear_regression', 'gru', 'ets', 'arima', 'prophet']
-    _evaluate_best_params(resource_loc, results_loc, debug)
+    evaluate_best_params(resource_loc, results_loc, debug)
