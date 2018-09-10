@@ -407,9 +407,10 @@ def evaluate_prophet(y, distance, rate):
     return {**times, **scores}
 
 
-def _evaluate_best_params():
-    for csv in resources:
-        station, rate = csv.replace('post/', '').replace('.csv', '').replace('day', 'D').replace('hour', 'H').split('-')
+def _evaluate_best_params(resources, results_folder, debugging=False):
+    for csv in glob.glob(f'{resources}/*.csv'):
+        station, rate = csv.replace(f'{resources}/', '').replace('.csv', '').replace('day', 'D').replace('hour',
+                                                                                                         'H').split('-')
         results = glob.glob(f'{results_folder}/{station}-{rate}*.csv')
         data_df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
             columns=['AirQualityStationEoICode', 'AveragingTime'])
@@ -417,7 +418,7 @@ def _evaluate_best_params():
         if len(data_df > 8760):
             data_df = data_df[:8760]
 
-        if debug:
+        if debugging:
             data_df = data_df[:debug_len]
 
         data_df = resample_dataframe(data_df, rate)
@@ -484,7 +485,7 @@ if __name__ == '__main__':
     debug_len = 200
     debug = not sys.gettrace() is None
 
-    resources = 'post/*.csv'
-    results_folder = 'results'
+    resource_loc = 'post'
+    results_loc = 'results'
     models = ['knn', 'decision_tree', 'random_forest', 'linear_regression', 'gru', 'ets', 'arima', 'prophet']
-    _evaluate_best_params()
+    _evaluate_best_params(resource_loc, results_loc, debug)
