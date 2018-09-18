@@ -250,7 +250,7 @@ def evaluate_decision_tree(row, x, y, validation_size):
     return {'params': params, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_random_forest(row, x, y,validation_size):
+def evaluate_random_forest(row, x, y, validation_size):
     """
     Evaluate the model with the params given in the row
 
@@ -529,13 +529,16 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
                 params = scoring['params']
                 scoring.pop('prediction')
                 scoring.pop('params')
-                best_stats_df = best_stats_df.append(pd.DataFrame(columns={'model': model,
-                                                           'differenced': differenced,
-                                                           'distance': distance,
-                                                           'artificial': artificial,
-                                                           'pollutant': pollutant,
-                                                           **params,
-                                                           **scoring}))
+                stats_dict = {'model': model,
+                              'differenced': differenced,
+                              'distance': distance,
+                              'artificial': artificial,
+                              'pollutant': pollutant,
+                              **params,
+                              **scoring}
+                stats_df = pd.DataFrame().from_records([stats_dict.values()], columns=stats_dict.keys())
+                best_stats_df = pd.concat(
+                    [best_stats_df, stats_df])
 
                 new_predictions_df = pd.DataFrame(prediction)
                 new_predictions_df['model'] = model
