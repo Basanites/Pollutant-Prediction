@@ -7,7 +7,7 @@ import time
 os.environ["LOKY_PICKLER"] = 'cloudpickle'
 import multiprocessing
 
-multiprocessing.set_start_method('forkserver')
+#multiprocessing.set_start_method('forkserver')
 
 import numpy as np
 import pandas as pd

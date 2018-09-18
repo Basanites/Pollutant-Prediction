@@ -9,13 +9,12 @@ import pandas as pd
 from fbprophet import Prophet
 from pyramid.arima import ARIMA
 from sklearn import neighbors, ensemble, tree, linear_model
-from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_squared_log_error, median_absolute_error, \
-    r2_score, explained_variance_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error, r2_score, \
+    explained_variance_score
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 from parameter_estimation import create_gru, resample_dataframe, difference_dataframe, create_artificial_features, \
-    rotate_series, \
-    scale_inputs, rescale_array
+    rotate_series, scale_inputs, rescale_array
 
 
 def deconstruct_save_string(savestring, folder):
@@ -48,12 +47,12 @@ def get_arima_params(row):
     params_dict = dict()
     for k in params:
         if k == 'order' or k == 'seasonal_order' or k == 'scoring_args':
-            value = eval(row[(row.model == 'arima')][k])
+            value = eval(row[k])
         else:
-            value = row[(row.model == 'arima')][k]
+            value = row[k]
 
         if not (type(value) is np.float64 and np.isnan(value)):
-            if type(value) is np.float64:
+            if type(value) is np.float64 or type(value) is float:
                 value = int(value)
             params_dict[k] = value
     return params_dict
@@ -71,9 +70,9 @@ def get_ets_params(row):
     params_dict = dict()
     for k in params:
         if k == 'initial_seasons':
-            value = eval(re.sub(' +(\n)*', ', ', row[(row.model == 'ets')][k]))
+            value = eval(re.sub(' +(\n)*', ', ', row[k]))
         else:
-            value = row[(row.model == 'ets')][k]
+            value = row[k]
         params_dict[k] = value
     return params_dict
 
@@ -88,8 +87,8 @@ def get_knn_params(row):
     params = ['n_neighbors', 'weights']
     params_dict = dict()
     for k in params:
-        value = row[(row.model == 'knn')][k]
-        if type(value) is np.float64:
+        value = row[k]
+        if type(value) is np.float64 or type(value) is float:
             value = int(value)
         params_dict[k] = value
     return params_dict
@@ -105,8 +104,8 @@ def get_decision_tree_params(row):
     params = ['max_depth']
     params_dict = dict()
     for k in params:
-        value = row[(row.model == 'decision_tree')][k]
-        if type(value) is np.float64:
+        value = row[k]
+        if type(value) is np.float64 or type(value) is float:
             value = int(value)
         params_dict[k] = value
     return params_dict
@@ -122,8 +121,8 @@ def get_random_forest_params(row):
     params = ['n_estimators', 'max_depth']
     params_dict = dict()
     for k in params:
-        value = row[(row.model == 'random_forest')][k]
-        if type(value) is np.float64:
+        value = row[k]
+        if type(value) is np.float64 or type(value) is float:
             value = int(value)
         params_dict[k] = value
     return params_dict
@@ -139,7 +138,7 @@ def get_linear_regression_params(row):
     params = ['normalize']
     params_dict = dict()
     for k in params:
-        value = row[(row.model == 'linear_regression')][k]
+        value = row[k]
         params_dict[k] = value
     return params_dict
 
@@ -154,7 +153,7 @@ def get_gru_params(row):
     params = ['weights', 'dropout_rate', 'input_shape', 'epochs', 'batch_size', 'learning_rate']
     params_dict = dict()
     for k in params:
-        value = row[(row.model == 'gru')][k]
+        value = row[k]
         if k == 'weights' or k == 'epochs' or k == 'batch_size':
             value = int(value)
         elif k == 'input_shape':
@@ -173,7 +172,6 @@ def score_prediction(actual, predicted, norm_factor=None):
     :return:            The dict containing the scores
     """
     scores = {'mean_squared_error': mean_squared_error(actual, predicted),
-              'mean_squared_log_error': mean_squared_log_error(actual, predicted),
               'mean_absolute_error': mean_absolute_error(actual, predicted),
               'median_absolute_error': median_absolute_error(actual, predicted),
               'r2': r2_score(actual, predicted),
@@ -182,9 +180,8 @@ def score_prediction(actual, predicted, norm_factor=None):
     if norm_factor:
         scores = {**scores, **{
             'norm_mean_squared_error': scores['mean_squared_error'] * norm_factor,
-            'norm_mean_squared_log_error': scores['mean_squared_log_error'] * norm_factor,
             'norm_mean_absolute_error': scores['mean_absolute_error'] * norm_factor,
-            'norm_median_absolute_error': scores['median_absolute_errorr'] * norm_factor,
+            'norm_median_absolute_error': scores['median_absolute_error'] * norm_factor,
             'norm_r2': scores['r2'] * norm_factor,
             'norm_explained_variance': scores['explained_variance'] * norm_factor
         }}
@@ -192,18 +189,18 @@ def score_prediction(actual, predicted, norm_factor=None):
     return scores
 
 
-def evaluate_knn(row, x, y, distance):
+def evaluate_knn(row, x, y, validation_size):
     """
     Evaluate the model with the params given in the row
 
     :param row:         The row to get the parameters from
     :param x:           The x input vector
     :param y:           The y target vector
-    :param distance:    The distance to predict for
+    :param validation_size:    The validation_size to predict for
     :return:
     """
-    used_x = x[:-distance]
-    used_y = y[:-distance]
+    used_x = x[:-validation_size]
+    used_y = y[:-validation_size]
     params = get_knn_params(row)
     times = dict()
 
@@ -213,27 +210,27 @@ def evaluate_knn(row, x, y, distance):
     times['fit_time'] = time.clock() - start
 
     start = time.clock()
-    prediction = fit.predict(x[-distance:])
+    prediction = fit.predict(x[-validation_size:])
     norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_decision_tree(row, x, y, distance):
+def evaluate_decision_tree(row, x, y, validation_size):
     """
     Evaluate the model with the params given in the row
 
-    :param row:         The row to get the parameters from
-    :param x:           The x input vector
-    :param y:           The y target vector
-    :param distance:    The distance to predict for
+    :param row:             The row to get the parameters from
+    :param x:               The x input vector
+    :param y:               The y target vector
+    :param validation_size: The validation distance to use for scoring
     :return:
     """
-    used_x = x[:-distance]
-    used_y = y[:-distance]
+    used_x = x[:-validation_size]
+    used_y = y[:-validation_size]
     params = get_decision_tree_params(row)
     times = dict()
 
@@ -243,27 +240,27 @@ def evaluate_decision_tree(row, x, y, distance):
     times['fit_time'] = time.clock() - start
 
     start = time.clock()
-    prediction = fit.predict(x[-distance:])
+    prediction = fit.predict(x[-validation_size:])
     norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_random_forest(row, x, y, distance):
+def evaluate_random_forest(row, x, y,validation_size):
     """
     Evaluate the model with the params given in the row
 
-    :param row:         The row to get the parameters from
-    :param x:           The x input vector
-    :param y:           The y target vector
-    :param distance:    The distance to predict for
+    :param row:             The row to get the parameters from
+    :param x:               The x input vector
+    :param y:               The y target vector
+    :param validation_size: The validation distance to use for scoring
     :return:
     """
-    used_x = x[:-distance]
-    used_y = y[:-distance]
+    used_x = x[:-validation_size]
+    used_y = y[:-validation_size]
     params = get_random_forest_params(row)
     times = dict()
 
@@ -273,27 +270,27 @@ def evaluate_random_forest(row, x, y, distance):
     times['fit_time'] = time.clock() - start
 
     start = time.clock()
-    prediction = fit.predict(x[-distance:])
+    prediction = fit.predict(x[-validation_size:])
     norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_linear_regression(row, x, y, distance):
+def evaluate_linear_regression(row, x, y, validation_size):
     """
     Evaluate the model with the params given in the row
 
-    :param row:         The row to get the parameters from
-    :param x:           The x input vector
-    :param y:           The y target vector
-    :param distance:    The distance to predict for
+    :param row:             The row to get the parameters from
+    :param x:               The x input vector
+    :param y:               The y target vector
+    :param validation_size: The validation distance to use for scoring
     :return:
     """
-    used_x = x[:-distance]
-    used_y = y[:-distance]
+    used_x = x[:-validation_size]
+    used_y = y[:-validation_size]
     params = get_linear_regression_params(row)
     times = dict()
 
@@ -303,23 +300,23 @@ def evaluate_linear_regression(row, x, y, distance):
     times['fit_time'] = time.clock() - start
 
     start = time.clock()
-    prediction = fit.predict(x[-distance:])
+    prediction = fit.predict(x[-validation_size:])
     norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_gru(row, x, y, distance):
+def evaluate_gru(row, x, y, validation_size):
     """
     Evaluate the model with the params given in the row
 
-    :param row:         The row to get the parameters from
-    :param x:           The x input vector
-    :param y:           The y target vector
-    :param distance:    The distance to predict for
+    :param row:             The row to get the parameters from
+    :param x:               The x input vector
+    :param y:               The y target vector
+    :param validation_size: The validation distance to use for scoring
     :return:
     """
     from tensorflow.python.keras.wrappers.scikit_learn import KerasRegressor
@@ -327,8 +324,8 @@ def evaluate_gru(row, x, y, distance):
     scaled_x, scaled_y, x_scaler, y_scaler = scale_inputs(x, y)
     scaled_x = scaled_x.values.reshape(scaled_x.shape[0], scaled_x.shape[1], 1)
     scaled_y = scaled_y.values
-    used_x = scaled_x[:-distance]
-    used_y = scaled_y[:-distance]
+    used_x = scaled_x[:-validation_size]
+    used_y = scaled_y[:-validation_size]
     params = get_gru_params(row)
     times = dict()
 
@@ -338,26 +335,26 @@ def evaluate_gru(row, x, y, distance):
     times['fit_time'] = time.clock() - start
 
     start = time.clock()
-    prediction = rescale_array(model.predict(scaled_x[-distance:]), y_scaler)
+    prediction = rescale_array(model.predict(scaled_x[-validation_size:]), y_scaler)
     norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_ets(row, y, distance, rate):
+def evaluate_ets(row, y, validation_size, rate):
     """
     Evaluate the model with the params given in the row
 
-    :param row:         The row to get the parameters from
-    :param y:           The y target vector
-    :param distance:    The distance to predict for
-    :param rate:        The sampling rate for the values in y
+    :param row:             The row to get the parameters from
+    :param y:               The y target vector
+    :param validation_size: The validation distance to use for scoring
+    :param rate:            The sampling rate for the values in y
     :return:
     """
-    used_y = y[:-distance]
+    used_y = y[:-validation_size]
     periods = int(len(used_y) / rate)
     params = get_ets_params(row)
     times = dict()
@@ -369,25 +366,25 @@ def evaluate_ets(row, y, distance, rate):
     times['fit_time'] = time.clock() - start
 
     start = time.clock()
-    prediction = fit.forecast(distance)
+    prediction = fit.forecast(validation_size)
     norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_arima(row, y, distance):
+def evaluate_arima(row, y, validation_size):
     """
     Evaluate the model with the params given in the row
 
-    :param row:         The row to get the parameters from
-    :param y:           The y target vector
-    :param distance:    The distance to predict for
+    :param row:             The row to get the parameters from
+    :param y:               The y target vector
+    :param validation_size: The validation distance to use for scoring
     :return:
     """
-    used_y = y[:-distance]
+    used_y = y[:-validation_size]
     params = get_arima_params(row)
     times = dict()
 
@@ -397,25 +394,25 @@ def evaluate_arima(row, y, distance):
     times['fit_time'] = time.clock() - start
 
     start = time.clock()
-    prediction = fit.predict(distance)
+    prediction = fit.predict(validation_size)
     norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_prophet(y, distance, rate):
+def evaluate_prophet(y, validation_size, rate):
     """
     Evaluate the model with the params given in the row
 
-    :param y:           The y target vector
-    :param distance:    The distance to predict for
-    :param rate:        The sampling rate for the values in y
+    :param y:               The y target vector
+    :param validation_size: The validation distance to use for scoring
+    :param rate:            The sampling rate for the values in y
     :return:
     """
-    used_y = y[:-distance]
+    used_y = y[:-validation_size]
     times = dict()
 
     start = time.clock()
@@ -426,18 +423,19 @@ def evaluate_prophet(y, distance, rate):
     times['fit_time'] = time.clock() - start
 
     start = time.clock()
-    future = prophet.make_future_dataframe(distance, rate)
+    future = prophet.make_future_dataframe(validation_size, rate)
     complete_prediction = prophet.predict(future)
-    prediction = complete_prediction['yhat'][-distance:]
+    prediction = complete_prediction['yhat'][-validation_size:]
     norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': {}, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_best_params(resources, results_folder, evaluation_folder, predictions_folder, debugging=False, debug_length=200):
+def evaluate_best_params(resources, results_folder, evaluation_folder, predictions_folder, debugging=False,
+                         debug_length=200):
     """
     Runs evaluation of the found best parameters using the matching csvs
 
@@ -479,7 +477,9 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
         for idx, r in stats_df.iterrows():
             pollutant, distance, differenced, direct, artificial, model = r['pollutant'], int(r['distance']), r[
-                'differenced'], r['direct'], r['artificial'], r['model']
+                'differenced'], r['direct'], eval(r['artificial']), r['model']
+
+            validation_distance = 24 if rate == 'D' else 7
 
             if differenced:
                 used_df = differenced_df
@@ -495,31 +495,31 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
                 if artificial:
                     steps = 7 if rate == 'D' else 24
-                    x = create_artificial_features(series, rate, steps)[steps:]
+                    x = create_artificial_features(series[:len(rotated)], rate, steps)[steps:]
                     y = rotated[steps:]
                 else:
-                    x = rest
+                    x = rest[:len(rotated)]
                     y = rotated
 
                 if model == 'knn':
-                    scoring = evaluate_knn(r, x, y, distance)
+                    scoring = evaluate_knn(r, x, y, validation_distance)
                 elif model == 'decision_tree':
-                    scoring = evaluate_decision_tree(r, x, y, distance)
+                    scoring = evaluate_decision_tree(r, x, y, validation_distance)
                 elif model == 'random_forest':
-                    scoring = evaluate_random_forest(r, x, y, distance)
+                    scoring = evaluate_random_forest(r, x, y, validation_distance)
                 elif model == 'linear_regression':
-                    scoring = evaluate_linear_regression(r, x, y, distance)
+                    scoring = evaluate_linear_regression(r, x, y, validation_distance)
                 elif model == 'gru':
-                    scoring = evaluate_gru(r, x, y, distance)
+                    scoring = evaluate_gru(r, x, y, validation_distance)
                 else:
                     scoring = False
             else:
                 if model == 'arima':
-                    scoring = evaluate_arima(r, series, distance)
+                    scoring = evaluate_arima(r, series, validation_distance)
                 elif model == 'ets':
-                    scoring = evaluate_ets(r, series, distance, rate)
+                    scoring = evaluate_ets(r, series, validation_distance, rate)
                 elif model == 'prophet':
-                    scoring = evaluate_prophet(series, distance, rate)
+                    scoring = evaluate_prophet(series, validation_distance, rate)
                 else:
                     scoring = False
 
@@ -528,22 +528,25 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
                 params = scoring['params']
                 scoring.pop('prediction')
                 scoring.pop('params')
-                best_stats_df.append({'model': model,
-                                      'differenced': differenced,
-                                      'distance': distance,
-                                      'artificial': artificial,
-                                      **params,
-                                      **scoring})
+                best_stats_df.append(pd.DataFrame(columns={'model': model,
+                                                           'differenced': differenced,
+                                                           'distance': distance,
+                                                           'artificial': artificial,
+                                                           'pollutant': pollutant,
+                                                           **params,
+                                                           **scoring}))
 
                 new_predictions_df = pd.DataFrame(prediction)
                 new_predictions_df['model'] = model
                 new_predictions_df['differenced'] = differenced
                 new_predictions_df['distance'] = distance
                 new_predictions_df['artificial'] = artificial
+                new_predictions_df['pollutant'] = pollutant
 
-                predictions_df = predictions_df.concat(new_predictions_df)
+                predictions_df = pd.concat([predictions_df, new_predictions_df])
 
-
+        best_stats_df = best_stats_df.reset_index()
+        predictions_df = predictions_df.reset_index()
         best_stats_df.to_csv(f'{evaluation_folder}/{station}-{rate}.csv')
         predictions_df.to_csv(f'{predictions_folder}/{station}-{rate}.csv')
 
