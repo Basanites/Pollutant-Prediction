@@ -5,9 +5,8 @@ import sys
 import time
 
 os.environ["LOKY_PICKLER"] = 'cloudpickle'
-import multiprocessing
 
-#multiprocessing.set_start_method('forkserver')
+# multiprocessing.set_start_method('forkserver')
 
 import numpy as np
 import pandas as pd
@@ -745,6 +744,7 @@ def find_best_params(data_dir):
 
         test_pollutants(df, station_name, steprate)
 
+
 if __name__ == '__main__':
     logger = Logger('./event.log')
     datadir = './post'
@@ -761,7 +761,7 @@ if __name__ == '__main__':
 
     while True:
         try:
-            find_best_params(datadir, logger)
+            find_best_params(datadir)
             sys.exit(0)
         except KeyboardInterrupt:
             sys.exit(1)
