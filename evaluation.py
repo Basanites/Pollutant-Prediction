@@ -7,6 +7,7 @@ import time
 import numpy as np
 import pandas as pd
 from fbprophet import Prophet
+from joblib import Parallel, delayed
 from pyramid.arima import ARIMA
 from sklearn import neighbors, ensemble, tree, linear_model
 from sklearn.metrics import mean_squared_error, mean_absolute_error, median_absolute_error, r2_score, \
@@ -444,8 +445,91 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
     :param results_folder:      The folder name in which the parameter estimation results are contained
     :param evaluation_folder:   The folder name to save evaluation results to
     :param debugging:           If debugging mode should be enabled
-                                (restricts used input length to 200 items per series)
+    :param debug_length:        The maximum amout of items to use in debugging mode
     """
+
+    def evaluate_model(r, data_frame, differenced_frame):
+        """
+        Evaluate model with parameters from row r
+
+        :param r:                   The row to extract parameters from
+        :param data_frame:          The complete dataframe to use
+        :param differenced_frame:   The differenced dataframe
+        :return:                    (stats, predictions) each as df
+        """
+        pollutant, distance, differenced, direct, artificial, model = r['pollutant'], int(r['distance']), r[
+            'differenced'], r['direct'], eval(r['artificial']), r['model']
+
+        validation_distance = 24 if rate == 'H' else 7
+
+        if differenced:
+            used_df = differenced_frame
+        else:
+            used_df = data_frame
+        series = used_df[pollutant]
+
+        if direct:
+            rotated = series
+            for j in range(0, distance):
+                rotated = rotate_series(rotated)[:-1]
+            rest = used_df.drop(columns=[pollutant])
+
+            if artificial:
+                steps = 7 if rate == 'D' else 24
+                x = create_artificial_features(series[:len(rotated)], rate, steps)[steps:]
+                y = rotated[steps:]
+            else:
+                x = rest[:len(rotated)]
+                y = rotated
+
+            if model == 'knn':
+                scoring = evaluate_knn(r, x, y, validation_distance)
+            elif model == 'decision_tree':
+                scoring = evaluate_decision_tree(r, x, y, validation_distance)
+            elif model == 'random_forest':
+                scoring = evaluate_random_forest(r, x, y, validation_distance)
+            elif model == 'linear_regression':
+                scoring = evaluate_linear_regression(r, x, y, validation_distance)
+            # elif model == 'gru':
+            #    scoring = evaluate_gru(r, x, y, validation_distance)
+            else:
+                scoring = False
+        else:
+            if model == 'arima':
+                scoring = evaluate_arima(r, series, validation_distance)
+            elif model == 'ets':
+                scoring = evaluate_ets(r, series, validation_distance, rate)
+            elif model == 'prophet':
+                scoring = evaluate_prophet(series, validation_distance, rate)
+            else:
+                scoring = False
+
+        new_stats_df = pd.DataFrame()
+        new_predictions_df = pd.DataFrame()
+
+        if scoring:
+            prediction = scoring['prediction']
+            params = scoring['params']
+            scoring.pop('prediction')
+            scoring.pop('params')
+            stats_dict = {'model': model,
+                          'differenced': differenced,
+                          'distance': distance,
+                          'artificial': artificial,
+                          'pollutant': pollutant,
+                          **params,
+                          **scoring}
+            new_stats_df = pd.DataFrame().from_records([stats_dict.values()], columns=stats_dict.keys())
+
+            new_predictions_df = pd.DataFrame(prediction)
+            new_predictions_df['model'] = model
+            new_predictions_df['differenced'] = differenced
+            new_predictions_df['distance'] = distance
+            new_predictions_df['artificial'] = artificial
+            new_predictions_df['pollutant'] = pollutant
+
+        return new_stats_df, new_predictions_df
+
     for csv in glob.glob(f'{resources}/*.csv'):
         station, rate = csv.replace(f'{resources}/', '').replace('.csv', '').replace('day', 'D').replace('hour',
                                                                                                          'H').split('-')
@@ -473,82 +557,18 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
             stats_df = pd.concat([stats_df, current_df])
 
         stats_df = stats_df.reset_index().drop(columns=['level_0'])
+
         best_stats_df = pd.DataFrame()
         predictions_df = pd.DataFrame()
 
-        for idx, r in stats_df.iterrows():
-            pollutant, distance, differenced, direct, artificial, model = r['pollutant'], int(r['distance']), r[
-                'differenced'], r['direct'], eval(r['artificial']), r['model']
+        results = Parallel(n_jobs=-1)(
+            delayed(evaluate_model)(row, data_df, differenced_df) for id, row in stats_df.iterrows())
+        
+        stats, predictions = zip(*results)
 
-            validation_distance = 24 if rate == 'H' else 7
-
-            if differenced:
-                used_df = differenced_df
-            else:
-                used_df = data_df
-            series = used_df[pollutant]
-
-            if direct:
-                rotated = series
-                for i in range(0, distance):
-                    rotated = rotate_series(rotated)[:-1]
-                rest = used_df.drop(columns=[pollutant])
-
-                if artificial:
-                    steps = 7 if rate == 'D' else 24
-                    x = create_artificial_features(series[:len(rotated)], rate, steps)[steps:]
-                    y = rotated[steps:]
-                else:
-                    x = rest[:len(rotated)]
-                    y = rotated
-
-                if model == 'knn':
-                    scoring = evaluate_knn(r, x, y, validation_distance)
-                elif model == 'decision_tree':
-                    scoring = evaluate_decision_tree(r, x, y, validation_distance)
-                elif model == 'random_forest':
-                    scoring = evaluate_random_forest(r, x, y, validation_distance)
-                elif model == 'linear_regression':
-                    scoring = evaluate_linear_regression(r, x, y, validation_distance)
-                elif model == 'gru':
-                    scoring = evaluate_gru(r, x, y, validation_distance)
-                else:
-                    scoring = False
-            else:
-                if model == 'arima':
-                    scoring = evaluate_arima(r, series, validation_distance)
-                elif model == 'ets':
-                    scoring = evaluate_ets(r, series, validation_distance, rate)
-                elif model == 'prophet':
-                    scoring = evaluate_prophet(series, validation_distance, rate)
-                else:
-                    scoring = False
-
-            if scoring:
-                prediction = scoring['prediction']
-                params = scoring['params']
-                scoring.pop('prediction')
-                scoring.pop('params')
-                stats_dict = {'model': model,
-                              'differenced': differenced,
-                              'distance': distance,
-                              'artificial': artificial,
-                              'pollutant': pollutant,
-                              **params,
-                              **scoring}
-                stats_df = pd.DataFrame().from_records([stats_dict.values()], columns=stats_dict.keys())
-                best_stats_df = pd.concat(
-                    [best_stats_df, stats_df])
-
-                new_predictions_df = pd.DataFrame(prediction)
-                new_predictions_df['model'] = model
-                new_predictions_df['differenced'] = differenced
-                new_predictions_df['distance'] = distance
-                new_predictions_df['artificial'] = artificial
-                new_predictions_df['pollutant'] = pollutant
-
-                predictions_df = pd.concat([predictions_df, new_predictions_df])
-
+        for i in range(len(stats)):
+            best_stats_df = pd.concat([best_stats_df, stats[i]])
+            predictions_df = pd.concat([predictions_df, predictions[i]])
         best_stats_df = best_stats_df.reset_index()
         predictions_df = predictions_df.reset_index()
         best_stats_df.to_csv(f'{evaluation_folder}/{station}-{rate}.csv')
@@ -556,7 +576,9 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
 
 if __name__ == '__main__':
-    debug = not sys.gettrace() is None
+    debug = (not sys.gettrace() is None) | (sys.argv[1] == 'debug') | (sys.argv[1] == True)
+    if debug:
+        print('Running in debug mode, amount of used items will be limited.')
 
     resource_loc = 'post'
     results_loc = 'results'
