@@ -544,8 +544,8 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
                 predictions_df = predictions_df.concat(new_predictions_df)
 
 
-        best_stats_df.to_csv(f'{evaluation_folder}/{station}-{rate}')
-        predictions_df.to_csv(f'{predictions_folder}/{station}-{rate}')
+        best_stats_df.to_csv(f'{evaluation_folder}/{station}-{rate}.csv')
+        predictions_df.to_csv(f'{predictions_folder}/{station}-{rate}.csv')
 
 
 if __name__ == '__main__':
