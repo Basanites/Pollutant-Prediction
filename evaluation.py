@@ -51,10 +51,10 @@ def get_arima_params(row):
         else:
             value = row[k]
 
-        if not (type(value) is np.float64 and np.isnan(value)):
-            if type(value) is np.float64 or type(value) is float:
-                value = int(value)
-            params_dict[k] = value
+        if type(value) is np.float64 or type(value) is float:
+            value = int(value)
+        params_dict[k] = value
+
     return params_dict
 
 
@@ -73,8 +73,7 @@ def get_ets_params(row):
             value = eval(re.sub(' +(\n)*', ', ', row[k]))
         else:
             value = row[k]
-        if not np.isnan(value):
-            params_dict[k] = value
+        params_dict[k] = value
     return params_dict
 
 
@@ -91,8 +90,7 @@ def get_knn_params(row):
         value = row[k]
         if type(value) is np.float64 or type(value) is float:
             value = int(value)
-        if not np.isnan(value):
-            params_dict[k] = value
+        params_dict[k] = value
     return params_dict
 
 
@@ -109,8 +107,7 @@ def get_decision_tree_params(row):
         value = row[k]
         if type(value) is np.float64 or type(value) is float:
             value = int(value)
-        if not np.isnan(value):
-            params_dict[k] = value
+        params_dict[k] = value
     return params_dict
 
 
@@ -143,8 +140,7 @@ def get_linear_regression_params(row):
     params_dict = dict()
     for k in params:
         value = row[k]
-        if not np.isnan(value):
-            params_dict[k] = value
+        params_dict[k] = value
     return params_dict
 
 
@@ -514,8 +510,8 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
                     scoring = evaluate_random_forest(r, x, y, validation_distance)
                 elif model == 'linear_regression':
                     scoring = evaluate_linear_regression(r, x, y, validation_distance)
-                elif model == 'gru':
-                    scoring = evaluate_gru(r, x, y, validation_distance)
+               # elif model == 'gru':
+                #    scoring = evaluate_gru(r, x, y, validation_distance)
                 else:
                     scoring = False
             else:
