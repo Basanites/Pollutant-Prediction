@@ -73,7 +73,8 @@ def get_ets_params(row):
             value = eval(re.sub(' +(\n)*', ', ', row[k]))
         else:
             value = row[k]
-        params_dict[k] = value
+        if not np.isnan(value):
+            params_dict[k] = value
     return params_dict
 
 
@@ -90,7 +91,8 @@ def get_knn_params(row):
         value = row[k]
         if type(value) is np.float64 or type(value) is float:
             value = int(value)
-        params_dict[k] = value
+        if not np.isnan(value):
+            params_dict[k] = value
     return params_dict
 
 
@@ -107,7 +109,8 @@ def get_decision_tree_params(row):
         value = row[k]
         if type(value) is np.float64 or type(value) is float:
             value = int(value)
-        params_dict[k] = value
+        if not np.isnan(value):
+            params_dict[k] = value
     return params_dict
 
 
@@ -122,9 +125,10 @@ def get_random_forest_params(row):
     params_dict = dict()
     for k in params:
         value = row[k]
-        if type(value) is np.float64 or type(value) is float:
+        if (type(value) is np.float64 or type(value) is float) and not np.isnan(value):
             value = int(value)
-        params_dict[k] = value
+        if not np.isnan(value):
+            params_dict[k] = value
     return params_dict
 
 
@@ -139,7 +143,8 @@ def get_linear_regression_params(row):
     params_dict = dict()
     for k in params:
         value = row[k]
-        params_dict[k] = value
+        if not np.isnan(value):
+            params_dict[k] = value
     return params_dict
 
 
