@@ -437,7 +437,7 @@ def evaluate_prophet(y, distance, rate):
     return {'params': {}, 'prediction': prediction, **times, **scores}
 
 
-def evaluate_best_params(resources, results_folder, evaluation_folder, debugging=False):
+def evaluate_best_params(resources, results_folder, evaluation_folder, predictions_folder, debugging=False, debug_length=200):
     """
     Runs evaluation of the found best parameters using the matching csvs
 
@@ -458,7 +458,7 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, debugging
             data_df = data_df[:8760]
 
         if debugging:
-            data_df = data_df[:debug_len]
+            data_df = data_df[:debug_length]
 
         data_df = resample_dataframe(data_df, rate)
         differenced_df = difference_dataframe(data_df)
@@ -475,6 +475,7 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, debugging
 
         stats_df = stats_df.reset_index().drop(columns=['level_0'])
         best_stats_df = pd.DataFrame()
+        predictions_df = pd.DataFrame()
 
         for idx, r in stats_df.iterrows():
             pollutant, distance, differenced, direct, artificial, model = r['pollutant'], int(r['distance']), r[
@@ -523,26 +524,43 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, debugging
                     scoring = False
 
             if scoring:
+                prediction = scoring['prediction']
+                params = scoring['params']
+                scoring.pop('prediction')
+                scoring.pop('params')
                 best_stats_df.append({'model': model,
                                       'differenced': differenced,
                                       'distance': distance,
                                       'artificial': artificial,
-                                      'pollutant': pollutant,
+                                      **params,
                                       **scoring})
 
+                new_predictions_df = pd.DataFrame(prediction)
+                new_predictions_df['model'] = model
+                new_predictions_df['differenced'] = differenced
+                new_predictions_df['distance'] = distance
+                new_predictions_df['artificial'] = artificial
+
+                predictions_df = predictions_df.concat(new_predictions_df)
+
+
         best_stats_df.to_csv(f'{evaluation_folder}/{station}-{rate}')
+        predictions_df.to_csv(f'{predictions_folder}/{station}-{rate}')
 
 
 if __name__ == '__main__':
-    debug_len = 200
     debug = not sys.gettrace() is None
 
     resource_loc = 'post'
     results_loc = 'results'
     evaluation_loc = 'eval'
+    predictions_loc = 'predictions'
 
     if not os.path.exists(f'./{evaluation_loc}'):
         os.makedirs(f'./{evaluation_loc}')
 
+    if not os.path.exists(f'./{predictions_loc}'):
+        os.makedirs(f'./{predictions_loc}')
+
     models = ['knn', 'decision_tree', 'random_forest', 'linear_regression', 'gru', 'ets', 'arima', 'prophet']
-    evaluate_best_params(resource_loc, results_loc, evaluation_loc, debug)
+    evaluate_best_params(resource_loc, results_loc, evaluation_loc, predictions_loc, debug)
