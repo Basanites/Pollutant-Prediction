@@ -480,7 +480,7 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
             pollutant, distance, differenced, direct, artificial, model = r['pollutant'], int(r['distance']), r[
                 'differenced'], r['direct'], eval(r['artificial']), r['model']
 
-            validation_distance = 24 if rate == 'D' else 7
+            validation_distance = 24 if rate == 'H' else 7
 
             if differenced:
                 used_df = differenced_df
@@ -510,8 +510,8 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
                     scoring = evaluate_random_forest(r, x, y, validation_distance)
                 elif model == 'linear_regression':
                     scoring = evaluate_linear_regression(r, x, y, validation_distance)
-               # elif model == 'gru':
-                #    scoring = evaluate_gru(r, x, y, validation_distance)
+                elif model == 'gru':
+                    scoring = evaluate_gru(r, x, y, validation_distance)
                 else:
                     scoring = False
             else:
@@ -529,7 +529,7 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
                 params = scoring['params']
                 scoring.pop('prediction')
                 scoring.pop('params')
-                best_stats_df.append(pd.DataFrame(columns={'model': model,
+                best_stats_df = best_stats_df.append(pd.DataFrame(columns={'model': model,
                                                            'differenced': differenced,
                                                            'distance': distance,
                                                            'artificial': artificial,
