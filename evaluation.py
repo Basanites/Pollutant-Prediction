@@ -163,20 +163,33 @@ def get_gru_params(row):
     return params_dict
 
 
-def score_prediction(actual, predicted):
+def score_prediction(actual, predicted, norm_factor=None):
     """
     Returns all possible regression scores for the given timeseries'
 
     :param actual:      The expected timeseries values
     :param predicted:   The predicted timeseries values
+    :param norm_factor: The factor to use for normalization of the scores
     :return:            The dict containing the scores
     """
-    return {'mean_squared_error': mean_squared_error(actual, predicted),
-            'mean_squared_log_error': mean_squared_log_error(actual, predicted),
-            'mean_absolute_error': mean_absolute_error(actual, predicted),
-            'median_absolute_error': median_absolute_error(actual, predicted),
-            'r2': r2_score(actual, predicted),
-            'explained_variance': explained_variance_score(actual, predicted)}
+    scores = {'mean_squared_error': mean_squared_error(actual, predicted),
+              'mean_squared_log_error': mean_squared_log_error(actual, predicted),
+              'mean_absolute_error': mean_absolute_error(actual, predicted),
+              'median_absolute_error': median_absolute_error(actual, predicted),
+              'r2': r2_score(actual, predicted),
+              'explained_variance': explained_variance_score(actual, predicted)}
+
+    if norm_factor:
+        scores = {**scores, **{
+            'norm_mean_squared_error': scores['mean_squared_error'] * norm_factor,
+            'norm_mean_squared_log_error': scores['mean_squared_log_error'] * norm_factor,
+            'norm_mean_absolute_error': scores['mean_absolute_error'] * norm_factor,
+            'norm_median_absolute_error': scores['median_absolute_errorr'] * norm_factor,
+            'norm_r2': scores['r2'] * norm_factor,
+            'norm_explained_variance': scores['explained_variance'] * norm_factor
+        }}
+
+    return scores
 
 
 def evaluate_knn(row, x, y, distance):
@@ -201,11 +214,12 @@ def evaluate_knn(row, x, y, distance):
 
     start = time.clock()
     prediction = fit.predict(x[-distance:])
+    norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction)
+    scores = score_prediction(y[-distance:], prediction, norm_factor)
 
-    return {**times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores}
 
 
 def evaluate_decision_tree(row, x, y, distance):
@@ -230,11 +244,12 @@ def evaluate_decision_tree(row, x, y, distance):
 
     start = time.clock()
     prediction = fit.predict(x[-distance:])
+    norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction)
+    scores = score_prediction(y[-distance:], prediction, norm_factor)
 
-    return {**times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores}
 
 
 def evaluate_random_forest(row, x, y, distance):
@@ -259,11 +274,12 @@ def evaluate_random_forest(row, x, y, distance):
 
     start = time.clock()
     prediction = fit.predict(x[-distance:])
+    norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction)
+    scores = score_prediction(y[-distance:], prediction, norm_factor)
 
-    return {**times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores}
 
 
 def evaluate_linear_regression(row, x, y, distance):
@@ -288,11 +304,12 @@ def evaluate_linear_regression(row, x, y, distance):
 
     start = time.clock()
     prediction = fit.predict(x[-distance:])
+    norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction)
+    scores = score_prediction(y[-distance:], prediction, norm_factor)
 
-    return {**times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores}
 
 
 def evaluate_gru(row, x, y, distance):
@@ -322,11 +339,12 @@ def evaluate_gru(row, x, y, distance):
 
     start = time.clock()
     prediction = rescale_array(model.predict(scaled_x[-distance:]), y_scaler)
+    norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction)
+    scores = score_prediction(y[-distance:], prediction, norm_factor)
 
-    return {**times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores}
 
 
 def evaluate_ets(row, y, distance, rate):
@@ -352,11 +370,12 @@ def evaluate_ets(row, y, distance, rate):
 
     start = time.clock()
     prediction = fit.forecast(distance)
+    norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction)
+    scores = score_prediction(y[-distance:], prediction, norm_factor)
 
-    return {**times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores}
 
 
 def evaluate_arima(row, y, distance):
@@ -379,11 +398,12 @@ def evaluate_arima(row, y, distance):
 
     start = time.clock()
     prediction = fit.predict(distance)
+    norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction)
+    scores = score_prediction(y[-distance:], prediction, norm_factor)
 
-    return {**times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores}
 
 
 def evaluate_prophet(y, distance, rate):
@@ -409,11 +429,12 @@ def evaluate_prophet(y, distance, rate):
     future = prophet.make_future_dataframe(distance, rate)
     complete_prediction = prophet.predict(future)
     prediction = complete_prediction['yhat'][-distance:]
+    norm_factor = prediction.max() - prediction.min()
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-distance:], prediction)
+    scores = score_prediction(y[-distance:], prediction, norm_factor)
 
-    return {**times, **scores}
+    return {'params': {}, 'prediction': prediction, **times, **scores}
 
 
 def evaluate_best_params(resources, results_folder, evaluation_folder, debugging=False):
