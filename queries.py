@@ -30,12 +30,31 @@ if __name__ == '__main__':
     times = ['fit_time', 'prediction_time']
     norm_measures = [f'norm_{measure}' for measure in measures]
 
-    used_df = frame
-    # Evaluate model averages depending on station, rate and pollutant. Ordered by nmse mean.
-    for station in used_df.station.unique():
-        station_df = used_df[used_df.station == station]
-        for rate in station_df.rate.unique():
-            rate_df = station_df[station_df.rate == rate]
+
+    for timebased in [True, False]:
+        used_df = frame[~frame.direct == timebased]
+        if not len(used_df):
+            continue
+
+        # Evaluate model averages depending on station, rate and pollutant. Ordered by nmse mean.
+        for station in used_df.station.unique():
+            station_df = used_df[used_df.station == station]
+            for rate in station_df.rate.unique():
+                rate_df = station_df[station_df.rate == rate]
+                for pollutant in rate_df.pollutant.unique():
+                    pollutant_df = rate_df[rate_df.pollutant == pollutant]
+
+                    best_avg = pollutant_df[['model', *norm_measures, *times]].groupby(
+                        'model').agg(
+                        ['mean', 'median', 'min', 'max']).sort_values(
+                        [('norm_mean_absolute_error', 'mean')])
+
+                    tex = best_avg.to_latex()
+                    write_to_file(tex_folder, f'model_avg-{timebased}-{station}-{rate}-{pollutant}.tex', tex)
+
+        # Evaluate model averages depending on rate and pollutant. Ordered by nmse mean.
+        for rate in used_df.rate.unique():
+            rate_df = used_df[used_df.rate == rate]
             for pollutant in rate_df.pollutant.unique():
                 pollutant_df = rate_df[rate_df.pollutant == pollutant]
 
@@ -45,50 +64,50 @@ if __name__ == '__main__':
                     [('norm_mean_absolute_error', 'mean')])
 
                 tex = best_avg.to_latex()
-                write_to_file(tex_folder, f'model_avg-{station}-{rate}-{pollutant}.tex', tex)
+                write_to_file(tex_folder, f'model_avg-{timebased}-{rate}-{pollutant}.tex', tex)
 
-    # Evaluate model averages depending on rate and pollutant. Ordered by nmse mean.
-    for rate in used_df.rate.unique():
-        rate_df = used_df[used_df.rate == rate]
-        for pollutant in rate_df.pollutant.unique():
-            pollutant_df = rate_df[rate_df.pollutant == pollutant]
+        # Evaluate model averages depending on rate. Ordered by nmse mean.
+        for rate in used_df.rate.unique():
+            rate_df = used_df[used_df.rate == rate]
 
-            best_avg = pollutant_df[['model', *norm_measures, *times]].groupby(
+            best_avg = rate_df[['model', *norm_measures, *times]].groupby(
                 'model').agg(
                 ['mean', 'median', 'min', 'max']).sort_values(
                 [('norm_mean_absolute_error', 'mean')])
 
             tex = best_avg.to_latex()
-            write_to_file(tex_folder, f'model_avg-{rate}-{pollutant}.tex', tex)
+            write_to_file(tex_folder, f'model_avg-{timebased}-{rate}.tex', tex)
 
-    # Evaluate model averages depending on rate. Ordered by nmse mean.
-    for rate in used_df.rate.unique():
-        rate_df = used_df[used_df.rate == rate]
-
-        best_avg = rate_df[['model', *norm_measures, *times]].groupby(
+        # Evaluate model averages depending on rate. Ordered by nmse mean.
+        best_avg = used_df[['model', *norm_measures, *times]].groupby(
             'model').agg(
             ['mean', 'median', 'min', 'max']).sort_values(
             [('norm_mean_absolute_error', 'mean')])
 
         tex = best_avg.to_latex()
-        write_to_file(tex_folder, f'model_avg-{rate}.tex', tex)
+        write_to_file(tex_folder, f'model_avg-{timebased}.tex', tex)
 
-    # Evaluate model averages depending on rate. Ordered by nmse mean.
-    best_avg = used_df[['model', *norm_measures, *times]].groupby(
-        'model').agg(
-        ['mean', 'median', 'min', 'max']).sort_values(
-        [('norm_mean_absolute_error', 'mean')])
+        # Evaluate distance averages depending on rate and pollutant. Ordered by nmse mean.
+        for rate in used_df.rate.unique():
+            rate_df = used_df[used_df.rate == rate]
+            for pollutant in rate_df.pollutant.unique():
+                pollutant_df = rate_df[rate_df.pollutant == pollutant]
+                for distance in pollutant_df.distance.unique():
+                    distance_df = pollutant_df[pollutant_df.distance == distance]
 
-    tex = best_avg.to_latex()
-    write_to_file(tex_folder, f'model_avg.tex', tex)
+                    best_avg = distance_df[['model', *norm_measures, *times]].groupby(
+                        'model').agg(
+                        ['mean', 'median', 'min', 'max']).sort_values(
+                        [('norm_mean_absolute_error', 'mean')])
 
-    # Evaluate distance averages depending on rate and pollutant. Ordered by nmse mean.
-    for rate in used_df.rate.unique():
-        rate_df = used_df[used_df.rate == rate]
-        for pollutant in rate_df.pollutant.unique():
-            pollutant_df = rate_df[rate_df.pollutant == pollutant]
-            for distance in pollutant_df.distance.unique():
-                distance_df = pollutant_df[pollutant_df.distance == distance]
+                    tex = best_avg.to_latex()
+                    write_to_file(tex_folder, f'distance_avg-{timebased}-{rate}-{pollutant}-{distance}.tex', tex)
+
+        # Evaluate distance averages depending on rate. Ordered by nmse mean.
+        for rate in used_df.rate.unique():
+            rate_df = used_df[used_df.rate == rate]
+            for distance in rate_df.distance.unique():
+                distance_df = rate_df[rate_df.distance == distance]
 
                 best_avg = distance_df[['model', *norm_measures, *times]].groupby(
                     'model').agg(
@@ -96,13 +115,11 @@ if __name__ == '__main__':
                     [('norm_mean_absolute_error', 'mean')])
 
                 tex = best_avg.to_latex()
-                write_to_file(tex_folder, f'distance_avg-{rate}-{pollutant}-{distance}.tex', tex)
+                write_to_file(tex_folder, f'distance_avg-{timebased}-{rate}-{distance}.tex', tex)
 
-    # Evaluate distance averages depending on rate. Ordered by nmse mean.
-    for rate in used_df.rate.unique():
-        rate_df = used_df[used_df.rate == rate]
-        for distance in rate_df.distance.unique():
-            distance_df = rate_df[rate_df.distance == distance]
+        # Evaluate global distance averages. Ordered by nmse mean.
+        for distance in used_df.distance.unique():
+            distance_df = used_df[used_df.distance == distance]
 
             best_avg = distance_df[['model', *norm_measures, *times]].groupby(
                 'model').agg(
@@ -110,18 +127,6 @@ if __name__ == '__main__':
                 [('norm_mean_absolute_error', 'mean')])
 
             tex = best_avg.to_latex()
-            write_to_file(tex_folder, f'distance_avg-{rate}-{distance}.tex', tex)
+            write_to_file(tex_folder, f'distance_avg-{timebased}-{distance}.tex', tex)
 
-    # Evaluate global distance averages. Ordered by nmse mean.
-    for distance in used_df.distance.unique():
-        distance_df = used_df[used_df.distance == distance]
-
-        best_avg = distance_df[['model', *norm_measures, *times]].groupby(
-            'model').agg(
-            ['mean', 'median', 'min', 'max']).sort_values(
-            [('norm_mean_absolute_error', 'mean')])
-
-        tex = best_avg.to_latex()
-        write_to_file(tex_folder, f'distance_avg-{distance}.tex', tex)
-
-    # Evaluate by count of first places for stations, distance, pollutant, rate combo
+        # Evaluate by count of first places for stations, distance, pollutant, rate combo
