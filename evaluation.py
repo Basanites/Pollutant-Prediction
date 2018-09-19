@@ -213,7 +213,7 @@ def evaluate_knn(row, x, y, validation_size):
 
     start = time.clock()
     prediction = fit.predict(x[-validation_size:])
-    norm_factor = 1 / (prediction.max() - prediction.min())
+    norm_factor = 1 / (y.max() - y.min())
     times['prediction_time'] = time.clock() - start
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
@@ -243,7 +243,7 @@ def evaluate_decision_tree(row, x, y, validation_size):
 
     start = time.clock()
     prediction = fit.predict(x[-validation_size:])
-    norm_factor = 1 / (prediction.max() - prediction.min())
+    norm_factor = 1 / (y.max() - y.min())
     times['prediction_time'] = time.clock() - start
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
@@ -273,7 +273,7 @@ def evaluate_random_forest(row, x, y, validation_size):
 
     start = time.clock()
     prediction = fit.predict(x[-validation_size:])
-    norm_factor = 1 / (prediction.max() - prediction.min())
+    norm_factor = 1 / (y.max() - y.min())
     times['prediction_time'] = time.clock() - start
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
@@ -303,7 +303,7 @@ def evaluate_linear_regression(row, x, y, validation_size):
 
     start = time.clock()
     prediction = fit.predict(x[-validation_size:])
-    norm_factor = 1 / (prediction.max() - prediction.min())
+    norm_factor = 1 / (y.max() - y.min())
     times['prediction_time'] = time.clock() - start
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
@@ -338,7 +338,7 @@ def evaluate_gru(row, x, y, validation_size):
 
     start = time.clock()
     prediction = rescale_array(model.predict(scaled_x[-validation_size:]), y_scaler)
-    norm_factor = 1 / (prediction.max() - prediction.min())
+    norm_factor = 1 / (y.max() - y.min())
     times['prediction_time'] = time.clock() - start
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
@@ -369,7 +369,7 @@ def evaluate_ets(row, y, validation_size, rate):
 
     start = time.clock()
     prediction = fit.forecast(validation_size)
-    norm_factor = 1 / (prediction.max() - prediction.min())
+    norm_factor = 1 / (y.max() - y.min())
     times['prediction_time'] = time.clock() - start
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
@@ -397,7 +397,7 @@ def evaluate_arima(row, y, validation_size):
 
     start = time.clock()
     prediction = fit.predict(validation_size)
-    norm_factor = 1 / (prediction.max() - prediction.min())
+    norm_factor = 1 / (y.max() - y.min())
     times['prediction_time'] = time.clock() - start
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
@@ -428,7 +428,7 @@ def evaluate_prophet(y, validation_size, rate):
     future = prophet.make_future_dataframe(validation_size, rate)
     complete_prediction = prophet.predict(future)
     prediction = complete_prediction['yhat'][-validation_size:]
-    norm_factor = 1 / (prediction.max() - prediction.min())
+    norm_factor = 1 / (y.max() - y.min())
     times['prediction_time'] = time.clock() - start
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
@@ -495,8 +495,8 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
                 scoring = evaluate_random_forest(r, x, y, validation_distance)
             elif model == 'linear_regression':
                 scoring = evaluate_linear_regression(r, x, y, validation_distance)
-            elif model == 'gru':
-                scoring = evaluate_gru(r, x, y, validation_distance)
+            #elif model == 'gru':
+            #    scoring = evaluate_gru(r, x, y, validation_distance)
             else:
                 scoring = False
         else:
