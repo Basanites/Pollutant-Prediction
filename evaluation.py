@@ -570,8 +570,13 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
         for i in range(len(stats)):
             best_stats_df = pd.concat([best_stats_df, stats[i]])
             predictions_df = pd.concat([predictions_df, predictions[i]])
+
         best_stats_df = best_stats_df.reset_index()
+        best_stats_df = best_stats_df.drop(columns=['index'])
+
         predictions_df = predictions_df.reset_index()
+        predictions_df = predictions_df.rename(index=str, columns={'index': 'step', 0: 'value'})
+
         best_stats_df.to_csv(f'{evaluation_folder}/{station}-{rate}.csv')
         predictions_df.to_csv(f'{predictions_folder}/{station}-{rate}.csv')
 
