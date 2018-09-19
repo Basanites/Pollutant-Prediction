@@ -458,8 +458,12 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
         :param differenced_frame:   The differenced dataframe
         :return:                    (stats, predictions) each as df
         """
-        pollutant, distance, differenced, direct, artificial, model = r['pollutant'], int(r['distance']), r[
-            'differenced'], r['direct'], eval(r['artificial']), r['model']
+        pollutant, distance, differenced, direct, model = r['pollutant'], int(r['distance']), r[
+            'differenced'], eval(r['direct']), r['model']
+        if direct:
+            artificial = eval(r['artificial'])
+        else:
+            artificial = False
 
         validation_distance = 24 if rate == 'H' else 7
 
@@ -514,6 +518,7 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
             scoring.pop('prediction')
             scoring.pop('params')
             stats_dict = {'model': model,
+                          'direct': direct,
                           'differenced': differenced,
                           'distance': distance,
                           'artificial': artificial,
@@ -524,6 +529,7 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
             new_predictions_df = pd.DataFrame(prediction)
             new_predictions_df['model'] = model
+            new_predictions_df['direct'] = direct
             new_predictions_df['differenced'] = differenced
             new_predictions_df['distance'] = distance
             new_predictions_df['artificial'] = artificial
