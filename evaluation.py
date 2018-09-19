@@ -218,7 +218,7 @@ def evaluate_knn(row, x, y, validation_size):
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
-    return {'params': params, 'prediction': prediction, **times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
 
 def evaluate_decision_tree(row, x, y, validation_size):
@@ -248,7 +248,7 @@ def evaluate_decision_tree(row, x, y, validation_size):
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
-    return {'params': params, 'prediction': prediction, **times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
 
 def evaluate_random_forest(row, x, y, validation_size):
@@ -278,7 +278,7 @@ def evaluate_random_forest(row, x, y, validation_size):
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
-    return {'params': params, 'prediction': prediction, **times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
 
 def evaluate_linear_regression(row, x, y, validation_size):
@@ -308,7 +308,7 @@ def evaluate_linear_regression(row, x, y, validation_size):
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
-    return {'params': params, 'prediction': prediction, **times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
 
 def evaluate_gru(row, x, y, validation_size):
@@ -343,7 +343,7 @@ def evaluate_gru(row, x, y, validation_size):
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
-    return {'params': params, 'prediction': prediction, **times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
 
 def evaluate_ets(row, y, validation_size, rate):
@@ -374,7 +374,7 @@ def evaluate_ets(row, y, validation_size, rate):
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
-    return {'params': params, 'prediction': prediction, **times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
 
 def evaluate_arima(row, y, validation_size):
@@ -402,7 +402,7 @@ def evaluate_arima(row, y, validation_size):
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
-    return {'params': params, 'prediction': prediction, **times, **scores}
+    return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
 
 def evaluate_prophet(y, validation_size, rate):
@@ -433,7 +433,7 @@ def evaluate_prophet(y, validation_size, rate):
 
     scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
-    return {'params': {}, 'prediction': prediction, **times, **scores}
+    return {'params': {}, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
 
 def evaluate_best_params(resources, results_folder, evaluation_folder, predictions_folder, debugging=False,
