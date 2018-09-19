@@ -443,6 +443,7 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
     :param resources:           The folder name of the converted eea weatherdata csv files
     :param results_folder:      The folder name in which the parameter estimation results are contained
+    :param predictions_folder:  The folder to save predictions to
     :param evaluation_folder:   The folder name to save evaluation results to
     :param debugging:           If debugging mode should be enabled
     :param debug_length:        The maximum amout of items to use in debugging mode
@@ -562,8 +563,8 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
         predictions_df = pd.DataFrame()
 
         results = Parallel(n_jobs=-1)(
-            delayed(evaluate_model)(row, data_df, differenced_df) for id, row in stats_df.iterrows())
-        
+            delayed(evaluate_model)(row, data_df, differenced_df) for idx, row in stats_df.iterrows())
+
         stats, predictions = zip(*results)
 
         for i in range(len(stats)):
