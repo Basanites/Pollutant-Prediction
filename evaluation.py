@@ -495,8 +495,8 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
                 scoring = evaluate_random_forest(r, x, y, validation_distance)
             elif model == 'linear_regression':
                 scoring = evaluate_linear_regression(r, x, y, validation_distance)
-            #elif model == 'gru':
-            #    scoring = evaluate_gru(r, x, y, validation_distance)
+            elif model == 'gru':
+                scoring = evaluate_gru(r, x, y, validation_distance)
             else:
                 scoring = False
         else:
