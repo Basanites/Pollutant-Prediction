@@ -164,7 +164,7 @@ def get_gru_params(row):
     return params_dict
 
 
-def score_prediction(actual, predicted, norm_factor=None):
+def score_prediction(actual, predicted, norm_factor=None, min_val=None):
     """
     Returns all possible regression scores for the given timeseries'
 
@@ -179,13 +179,13 @@ def score_prediction(actual, predicted, norm_factor=None):
               'r2': r2_score(actual, predicted),
               'explained_variance': explained_variance_score(actual, predicted)}
 
-    if norm_factor:
+    if norm_factor and min_val:
         scores = {**scores, **{
-            'norm_mean_squared_error': scores['mean_squared_error'] * norm_factor,
-            'norm_mean_absolute_error': scores['mean_absolute_error'] * norm_factor,
-            'norm_median_absolute_error': scores['median_absolute_error'] * norm_factor,
-            'norm_r2': scores['r2'] * norm_factor,
-            'norm_explained_variance': scores['explained_variance'] * norm_factor
+            'norm_mean_squared_error': (scores['mean_squared_error'] - min_val) * norm_factor,
+            'norm_mean_absolute_error': (scores['mean_absolute_error'] - min_val) * norm_factor,
+            'norm_median_absolute_error': (scores['median_absolute_error'] - min_val) * norm_factor,
+            'norm_r2': (scores['r2'] - min_val) * norm_factor,
+            'norm_explained_variance': (scores['explained_variance'] - min_val) * norm_factor
         }}
 
     return scores
@@ -246,7 +246,7 @@ def evaluate_decision_tree(row, x, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -276,7 +276,7 @@ def evaluate_random_forest(row, x, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -306,7 +306,7 @@ def evaluate_linear_regression(row, x, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -341,7 +341,7 @@ def evaluate_gru(row, x, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -372,7 +372,7 @@ def evaluate_ets(row, y, validation_size, rate):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -400,7 +400,7 @@ def evaluate_arima(row, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -431,7 +431,7 @@ def evaluate_prophet(y, validation_size, rate):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
 
     return {'params': {}, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
