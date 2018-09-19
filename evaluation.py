@@ -164,7 +164,7 @@ def get_gru_params(row):
     return params_dict
 
 
-def score_prediction(actual, predicted, norm_factor=None, min_val=None):
+def score_prediction(actual, predicted, norm_factor=None):
     """
     Returns all possible regression scores for the given timeseries'
 
@@ -179,13 +179,13 @@ def score_prediction(actual, predicted, norm_factor=None, min_val=None):
               'r2': r2_score(actual, predicted),
               'explained_variance': explained_variance_score(actual, predicted)}
 
-    if norm_factor and min_val:
+    if norm_factor:
         scores = {**scores, **{
-            'norm_mean_squared_error': (scores['mean_squared_error'] - min_val) * norm_factor,
-            'norm_mean_absolute_error': (scores['mean_absolute_error'] - min_val) * norm_factor,
-            'norm_median_absolute_error': (scores['median_absolute_error'] - min_val) * norm_factor,
-            'norm_r2': (scores['r2'] - min_val) * norm_factor,
-            'norm_explained_variance': (scores['explained_variance'] - min_val) * norm_factor
+            'norm_mean_squared_error': scores['mean_squared_error'] * norm_factor,
+            'norm_mean_absolute_error': scores['mean_absolute_error'] * norm_factor,
+            'norm_median_absolute_error': scores['median_absolute_error'] * norm_factor,
+            'norm_r2': scores['r2'] * norm_factor,
+            'norm_explained_variance': scores['explained_variance'] * norm_factor
         }}
 
     return scores
@@ -246,7 +246,7 @@ def evaluate_decision_tree(row, x, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -276,7 +276,7 @@ def evaluate_random_forest(row, x, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -306,7 +306,7 @@ def evaluate_linear_regression(row, x, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -341,7 +341,7 @@ def evaluate_gru(row, x, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -372,7 +372,7 @@ def evaluate_ets(row, y, validation_size, rate):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -400,7 +400,7 @@ def evaluate_arima(row, y, validation_size):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': params, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -431,7 +431,7 @@ def evaluate_prophet(y, validation_size, rate):
     norm_factor = 1 / (prediction.max() - prediction.min())
     times['prediction_time'] = time.clock() - start
 
-    scores = score_prediction(y[-validation_size:], prediction, norm_factor, prediction.min())
+    scores = score_prediction(y[-validation_size:], prediction, norm_factor)
 
     return {'params': {}, 'prediction': prediction, **times, **scores, 'norm_factor': norm_factor}
 
@@ -537,11 +537,12 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
         return new_stats_df, new_predictions_df
 
-    evaluated =  glob.glob(f'{evaluation_folder}/*.csv')
+    evaluated = glob.glob(f'{evaluation_folder}/*.csv')
     evaluated_pairs = []
     for csv in evaluated:
         station, rate = csv.replace(f'{evaluation_folder}/', '').replace('.csv', '').replace('day', 'D').replace('hour',
-                                                                                                         'H').split('-')
+                                                                                                                 'H').split(
+            '-')
         evaluated_pairs.append((station, rate))
 
     items = glob.glob(f'{resources}/*.csv')
@@ -588,9 +589,9 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
         stats, predictions = zip(*eval_results)
 
-        for i in range(len(stats)):
-            best_stats_df = pd.concat([best_stats_df, stats[i]])
-            predictions_df = pd.concat([predictions_df, predictions[i]])
+        for j in range(len(stats)):
+            best_stats_df = pd.concat([best_stats_df, stats[j]])
+            predictions_df = pd.concat([predictions_df, predictions[j]])
 
         best_stats_df = best_stats_df.reset_index()
         best_stats_df = best_stats_df.drop(columns=['index'])
