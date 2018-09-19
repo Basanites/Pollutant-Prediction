@@ -98,4 +98,30 @@ if __name__ == '__main__':
                 tex = best_avg.to_latex()
                 write_to_file(tex_folder, f'distance_avg-{rate}-{pollutant}-{distance}.tex', tex)
 
+    # Evaluate distance averages depending on rate. Ordered by nmse mean.
+    for rate in used_df.rate.unique():
+        rate_df = used_df[used_df.rate == rate]
+        for distance in rate_df.distance.unique():
+            distance_df = rate_df[rate_df.distance == distance]
+
+            best_avg = distance_df[['model', *norm_measures, *times]].groupby(
+                'model').agg(
+                ['mean', 'median', 'min', 'max']).sort_values(
+                [('norm_mean_absolute_error', 'mean')])
+
+            tex = best_avg.to_latex()
+            write_to_file(tex_folder, f'distance_avg-{rate}-{distance}.tex', tex)
+
+    # Evaluate global distance averages. Ordered by nmse mean.
+    for distance in used_df.distance.unique():
+        distance_df = used_df[used_df.distance == distance]
+
+        best_avg = distance_df[['model', *norm_measures, *times]].groupby(
+            'model').agg(
+            ['mean', 'median', 'min', 'max']).sort_values(
+            [('norm_mean_absolute_error', 'mean')])
+
+        tex = best_avg.to_latex()
+        write_to_file(tex_folder, f'distance_avg-{distance}.tex', tex)
+
     # Evaluate by count of first places for stations, distance, pollutant, rate combo
