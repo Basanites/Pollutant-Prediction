@@ -531,9 +531,24 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
         return new_stats_df, new_predictions_df
 
-    for csv in glob.glob(f'{resources}/*.csv'):
+    evaluated =  glob.glob(f'{evaluation_folder}/*.csv')
+    evaluated_pairs = []
+    for csv in evaluated:
+        station, rate = csv.replace(f'{evaluation_folder}/', '').replace('.csv', '').replace('day', 'D').replace('hour',
+                                                                                                         'H').split('-')
+        evaluated_pairs.append((station, rate))
+
+    items = glob.glob(f'{resources}/*.csv')
+    for i in range(len(items)):
+        csv = items[i]
         station, rate = csv.replace(f'{resources}/', '').replace('.csv', '').replace('day', 'D').replace('hour',
                                                                                                          'H').split('-')
+
+        if (station, rate) in evaluated_pairs:
+            print(f'skipping station {station} with rate {rate} because it was already evaluated')
+            continue
+        print(f'({i + 1}/{len(items)})')
+
         results = glob.glob(f'{results_folder}/{station}-{rate}*.csv')
         data_df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
             columns=['AirQualityStationEoICode', 'AveragingTime'])
@@ -562,10 +577,10 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
         best_stats_df = pd.DataFrame()
         predictions_df = pd.DataFrame()
 
-        results = Parallel(n_jobs=-1)(
+        eval_results = Parallel(n_jobs=-1)(
             delayed(evaluate_model)(row, data_df, differenced_df) for idx, row in stats_df.iterrows())
 
-        stats, predictions = zip(*results)
+        stats, predictions = zip(*eval_results)
 
         for i in range(len(stats)):
             best_stats_df = pd.concat([best_stats_df, stats[i]])
@@ -579,6 +594,7 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
         best_stats_df.to_csv(f'{evaluation_folder}/{station}-{rate}.csv')
         predictions_df.to_csv(f'{predictions_folder}/{station}-{rate}.csv')
+        evaluated_pairs.append((station, rate))
 
 
 if __name__ == '__main__':
