@@ -71,7 +71,8 @@ def get_ets_params(row):
     params_dict = dict()
     for k in params:
         if k == 'initial_seasons':
-            value = eval(re.sub(' +(\n)*', ', ', row[k]))
+            continue
+            # value = eval(re.sub(' +(\n)*', ', ', row[k]))
         else:
             value = row[k]
         params_dict[k] = value
