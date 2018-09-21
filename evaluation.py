@@ -576,6 +576,9 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
             info = deconstruct_save_string(result, results_folder)
             current_df = pd.read_csv(result, index_col=0)
 
+            if info['direct'] == 'False':
+                current_df = pd.concat([current_df, pd.DataFrame({'model': ['prophet']})])
+
             for k, v in info.items():
                 current_df[k] = v
 
