@@ -605,7 +605,9 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
 
 
 if __name__ == '__main__':
-    debug = (not sys.gettrace() is None) | (sys.argv[1] == 'debug') | (sys.argv[1] == True)
+    debug = (not sys.gettrace() is None)
+    if len(sys.argv > 1):
+        debug = (sys.argv[1] == 'debug') | (sys.argv[1] == True)
     if debug:
         print('Running in debug mode, amount of used items will be limited.')
 
