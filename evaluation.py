@@ -356,8 +356,9 @@ def evaluate_ets(row, y, validation_size, rate):
     :param rate:            The sampling rate for the values in y
     :return:
     """
+    period_length = 24 if rate == 'H' else 7
     used_y = y[:-validation_size]
-    periods = int(len(used_y) / rate)
+    periods = int(len(used_y) / period_length)
     params = get_ets_params(row)
     times = dict()
 
