@@ -4,7 +4,7 @@ import os
 import sys
 import time
 
-os.environ["LOKY_PICKLER"] = 'cloudpickle'
+
 
 # multiprocessing.set_start_method('forkserver')
 
@@ -746,6 +746,7 @@ def find_best_params(data_dir):
 
 
 if __name__ == '__main__':
+    os.environ["LOKY_PICKLER"] = 'cloudpickle'
     logger = Logger('./event.log')
     datadir = './post'
     modeldir = './models'
