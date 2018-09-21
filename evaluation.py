@@ -333,7 +333,7 @@ def evaluate_gru(row, x, y, validation_size):
 
     start = time.clock()
     model = KerasRegressor(build_fn=create_gru, **params)
-    fit = model.fit(used_x, used_y)
+    fit = model.fit(used_x, used_y, verbose=0)
     times['fit_time'] = time.clock() - start
 
     start = time.clock()
