@@ -552,13 +552,17 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
         csv = items[i]
         station, rate = csv.replace(f'{resources}/', '').replace('.csv', '').replace('day', 'D').replace('hour',
                                                                                                          'H').split('-')
-
+        # don't evaluate already done stations
         if (station, rate) in evaluated_pairs:
             print(f'skipping station {station} with rate {rate} because it was already evaluated')
             continue
         print(f'({i + 1}/{len(items)})')
 
+        # don't evaluate stations, that have not jet been parameter estimated for
         results = glob.glob(f'{results_folder}/{station}-{rate}*.csv')
+        if not results:
+            continue
+
         data_df = pd.read_csv(csv, index_col=0, parse_dates=[0], infer_datetime_format=True).drop(
             columns=['AirQualityStationEoICode', 'AveragingTime'])
 
@@ -571,6 +575,7 @@ def evaluate_best_params(resources, results_folder, evaluation_folder, predictio
         data_df = resample_dataframe(data_df, rate)
         differenced_df = difference_dataframe(data_df)
 
+        # create df with all model stats for the station
         stats_df = pd.DataFrame()
         for result in results:
             info = deconstruct_save_string(result, results_folder)
