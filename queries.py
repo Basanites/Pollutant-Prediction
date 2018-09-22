@@ -30,103 +30,102 @@ if __name__ == '__main__':
     times = ['fit_time', 'prediction_time']
     norm_measures = [f'norm_{measure}' for measure in measures]
 
-
     for timebased in [True, False]:
-        used_df = frame[~frame.direct == timebased]
-        if not len(used_df):
-            continue
+        for differenced in [True, False]:
+            if timebased:
+                options = [False]
+            else:
+                options = [True, False]
 
-        # Evaluate model averages depending on station, rate and pollutant. Ordered by nmse mean.
-        for station in used_df.station.unique():
-            station_df = used_df[used_df.station == station]
-            for rate in station_df.rate.unique():
-                rate_df = station_df[station_df.rate == rate]
-                for pollutant in rate_df.pollutant.unique():
-                    pollutant_df = rate_df[rate_df.pollutant == pollutant]
+            for artificial in options:
+                # count of first places by pollutant and distance for model on mse
+                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                        frame.differenced == differenced)][
+                    ['mean_squared_error', 'model', 'distance', 'station', 'pollutant']].sort_values(
+                    by='mean_squared_error').groupby(
+                    ['distance', 'station', 'pollutant'], as_index=False).first().groupby(
+                    ['pollutant', 'distance', 'model'], as_index=False).count().rename(
+                    index=str, columns={'mean_squared_error': 'best_mse_count'})[
+                    ['pollutant', 'model', 'distance', 'best_mse_count']].sort_values(
+                    by=['pollutant', 'distance', 'best_mse_count'], ascending=[True, True, False])
 
-                    best_avg = pollutant_df[['model', *norm_measures, *times]].groupby(
-                        'model').agg(
-                        ['mean', 'median', 'min', 'max']).sort_values(
-                        [('norm_mean_absolute_error', 'mean')])
+                # count of first places by pollutant for model over mse mean by distance
+                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                        frame.differenced == differenced)][
+                    ['mean_squared_error', 'model', 'distance', 'station', 'pollutant']].groupby(
+                    ['model', 'station', 'pollutant'], as_index=False).mean().sort_values(
+                    by='mean_squared_error').groupby(
+                    ['station', 'pollutant'], as_index=False).first().sort_values(by='mean_squared_error').groupby(
+                    ['model', 'pollutant'], as_index=False).count()[
+                    ['pollutant', 'model', 'mean_squared_error']].sort_values(
+                    by=['pollutant', 'mean_squared_error'], ascending=[True, False]).rename(
+                    index=str, columns={'mean_squared_error': 'best_mse_by_distance_avg'})
 
-                    tex = best_avg.to_latex()
-                    write_to_file(tex_folder, f'model_avg-{timebased}-{station}-{rate}-{pollutant}.tex', tex)
+                # count of first places by pollutant for model over mse mean by distance. independent of artificial
+                frame[(~(frame.direct == timebased)) & (frame.differenced == differenced)][
+                    ['mean_squared_error', 'model', 'distance', 'station', 'pollutant']].groupby(
+                    ['model', 'station', 'pollutant'], as_index=False).mean().sort_values(
+                    by='mean_squared_error').groupby(
+                    ['station', 'pollutant'], as_index=False).first().sort_values(by='mean_squared_error').groupby(
+                    ['model', 'pollutant'], as_index=False).count()[
+                    ['pollutant', 'model', 'mean_squared_error']].sort_values(
+                    by=['pollutant', 'mean_squared_error'], ascending=[True, False]).rename(
+                    index=str, columns={'mean_squared_error': 'best_mse_by_distance_avg'})
 
-        # Evaluate model averages depending on rate and pollutant. Ordered by nmse mean.
-        for rate in used_df.rate.unique():
-            rate_df = used_df[used_df.rate == rate]
-            for pollutant in rate_df.pollutant.unique():
-                pollutant_df = rate_df[rate_df.pollutant == pollutant]
+                # Evaluate model averages depending on distance, rate and pollutant. Ordered by nmae mean.
+                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                            frame.differenced == differenced)][
+                    ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures, *times]].groupby(
+                    ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
+                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+                    ['rate', 'pollutant', 'model', 'distance', ('norm_mean_absolute_error', 'mean')])
 
-                best_avg = pollutant_df[['model', *norm_measures, *times]].groupby(
-                    'model').agg(
-                    ['mean', 'median', 'min', 'max']).sort_values(
-                    [('norm_mean_absolute_error', 'mean')])
+                # Evaluate model averages depending on distance, rate and pollutant. Best model for pollutant and
+                # distance combo based on nmae mean.
+                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                            frame.differenced == differenced)][
+                    ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures, *times]].groupby(
+                    ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
+                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+                    [('norm_mean_absolute_error', 'mean'), 'rate', 'pollutant', 'model', 'distance']).groupby(
+                    ['rate', 'pollutant', 'distance']).first()
 
-                tex = best_avg.to_latex()
-                write_to_file(tex_folder, f'model_avg-{timebased}-{rate}-{pollutant}.tex', tex)
+                # Evaluate model averages depending on distance, rate and pollutant. Best model per pollutant mae mean.
+                # Count amount of best per pollutant
+                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                            frame.differenced == differenced)][
+                    ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures, *times]].groupby(
+                    ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
+                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+                    ['rate', 'pollutant', 'distance', ('norm_mean_absolute_error', 'mean')]).groupby(
+                    ['rate', 'pollutant', 'distance']).first().groupby(
+                    ['pollutant', 'model']).count()[['rate']].rename(
+                    index=str, columns={'rate': 'best_count'}).reset_index().sort_values(
+                    ['pollutant', 'best_count'], ascending=[True, False])
 
-        # Evaluate model averages depending on rate. Ordered by nmse mean.
-        for rate in used_df.rate.unique():
-            rate_df = used_df[used_df.rate == rate]
+                # Evaluate model averages depending on distance, rate and pollutant. Best model per pollutant mae mean.
+                # Count amount of best per distance
+                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                            frame.differenced == differenced)][
+                    ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures, *times]].groupby(
+                    ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
+                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+                    ['rate', 'pollutant', 'distance', ('norm_mean_absolute_error', 'mean')]).groupby(
+                    ['rate', 'pollutant', 'distance']).first().groupby(
+                    ['distance', 'model']).count()[['rate']].rename(
+                    index=str, columns={'rate': 'best_count'}).reset_index().sort_values(
+                    ['distance', 'best_count'], ascending=[True, False])
 
-            best_avg = rate_df[['model', *norm_measures, *times]].groupby(
-                'model').agg(
-                ['mean', 'median', 'min', 'max']).sort_values(
-                [('norm_mean_absolute_error', 'mean')])
+                # General statistics for models based on rate
+                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                            frame.differenced == differenced)][
+                    ['model', 'station', 'rate', *norm_measures, *times]].groupby(
+                    ['model', 'rate'], as_index=False).agg(
+                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(['rate', 'model'])
 
-            tex = best_avg.to_latex()
-            write_to_file(tex_folder, f'model_avg-{timebased}-{rate}.tex', tex)
-
-        # Evaluate model averages depending on rate. Ordered by nmse mean.
-        best_avg = used_df[['model', *norm_measures, *times]].groupby(
-            'model').agg(
-            ['mean', 'median', 'min', 'max']).sort_values(
-            [('norm_mean_absolute_error', 'mean')])
-
-        tex = best_avg.to_latex()
-        write_to_file(tex_folder, f'model_avg-{timebased}.tex', tex)
-
-        # Evaluate distance averages depending on rate and pollutant. Ordered by nmse mean.
-        for rate in used_df.rate.unique():
-            rate_df = used_df[used_df.rate == rate]
-            for pollutant in rate_df.pollutant.unique():
-                pollutant_df = rate_df[rate_df.pollutant == pollutant]
-                for distance in pollutant_df.distance.unique():
-                    distance_df = pollutant_df[pollutant_df.distance == distance]
-
-                    best_avg = distance_df[['model', *norm_measures, *times]].groupby(
-                        'model').agg(
-                        ['mean', 'median', 'min', 'max']).sort_values(
-                        [('norm_mean_absolute_error', 'mean')])
-
-                    tex = best_avg.to_latex()
-                    write_to_file(tex_folder, f'distance_avg-{timebased}-{rate}-{pollutant}-{distance}.tex', tex)
-
-        # Evaluate distance averages depending on rate. Ordered by nmse mean.
-        for rate in used_df.rate.unique():
-            rate_df = used_df[used_df.rate == rate]
-            for distance in rate_df.distance.unique():
-                distance_df = rate_df[rate_df.distance == distance]
-
-                best_avg = distance_df[['model', *norm_measures, *times]].groupby(
-                    'model').agg(
-                    ['mean', 'median', 'min', 'max']).sort_values(
-                    [('norm_mean_absolute_error', 'mean')])
-
-                tex = best_avg.to_latex()
-                write_to_file(tex_folder, f'distance_avg-{timebased}-{rate}-{distance}.tex', tex)
-
-        # Evaluate global distance averages. Ordered by nmse mean.
-        for distance in used_df.distance.unique():
-            distance_df = used_df[used_df.distance == distance]
-
-            best_avg = distance_df[['model', *norm_measures, *times]].groupby(
-                'model').agg(
-                ['mean', 'median', 'min', 'max']).sort_values(
-                [('norm_mean_absolute_error', 'mean')])
-
-            tex = best_avg.to_latex()
-            write_to_file(tex_folder, f'distance_avg-{timebased}-{distance}.tex', tex)
-
-        # Evaluate by count of first places for stations, distance, pollutant, rate combo
+                # General statistics for models based on distance and rate
+                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                            frame.differenced == differenced)][
+                    ['model', 'station', 'rate', 'distance', *norm_measures, *times]].groupby(
+                    ['model', 'rate', 'distance'], as_index=False).agg(
+                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(['rate', 'model', 'distance'])
