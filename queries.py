@@ -14,8 +14,12 @@ def _export_dataframe(df, name):
     write_to_file(tex_folder, f'{name}.tex', df.to_latex())
 
 
-def generate_name(timebased_, differenced_, artificial_, rate_=None):
-    out = f'timebased={timebased_}-differenced={differenced_}-artificial={artificial_}'
+def generate_name(timebased_, differenced_=None, artificial_=None, rate_=None):
+    out = f'timebased={timebased_}'
+    if differenced_:
+        out += f'-differenced={differenced_}'
+    if artificial_:
+        out += f'-artificial={artificial_}'
     if rate_:
         out += f'-rate={rate}'
     return out
@@ -111,6 +115,31 @@ if __name__ == '__main__':
                     ['rate', 'pollutant', 'best_mse_count'], ascending=[True, True, False])[
                     ['rate', 'pollutant', 'model', 'best_mse_count']]
                 _export_dataframe(best_by_poll, 'best_by_poll-' + current_name)
+
+                # count of first places for nmae split by artificial
+                artificial_comparison = frame[(~(frame.direct == timebased)) & (frame.differenced == differenced)][
+                    ['norm_mean_absolute_error', 'model', 'distance', 'station', 'pollutant', 'rate',
+                     'artificial']].sort_values(
+                    by='norm_mean_absolute_error').groupby(
+                    ['station', 'rate', 'pollutant', 'distance', 'model'], as_index=False).first().groupby(
+                    ['model', 'artificial', 'rate'], as_index=False).count()[
+                    ['rate', 'model', 'artificial', 'norm_mean_absolute_error']].rename(
+                    index=str, columns={'norm_mean_absolute_error': 'count_best_nmae'}).sort_values(
+                    ['rate', 'model', 'count_best_nmae'], ascending=[True, True, False])
+                _export_dataframe(artificial_comparison, 'best_by_artificial' + generate_name(timebased, differenced))
+
+                # count of first places for nmae split by differenced
+                differenced_comparison = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial)][
+                    ['norm_mean_absolute_error', 'model', 'distance', 'station', 'pollutant', 'rate',
+                     'differenced']].sort_values(
+                    by='norm_mean_absolute_error').groupby(
+                    ['station', 'rate', 'pollutant', 'distance', 'model'], as_index=False).first().groupby(
+                    ['model', 'differenced', 'rate'], as_index=False).count()[
+                    ['rate', 'model', 'differenced', 'norm_mean_absolute_error']].rename(
+                    index=str, columns={'norm_mean_absolute_error': 'count_best_nmae'}).sort_values(
+                    ['rate', 'model', 'count_best_nmae'], ascending=[True, True, False])
+                _export_dataframe(artificial_comparison,
+                                  'best_by_differenced' + generate_name(timebased, artificial_=artificial))
 
                 # split on rate to preserve internal sense of size
                 for rate in ['D', 'H']:
