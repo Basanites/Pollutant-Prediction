@@ -9,11 +9,26 @@ def write_to_file(folder, name, content):
         file.write(content)
 
 
+def _export_dataframe(df, name):
+    df.to_excel(f'./{excel_folder}/{name}.xlsx')
+    write_to_file(tex_folder, f'{name}.tex', df.to_latex())
+
+
+def generate_name(timebased_, differenced_, artificial_, rate_=None):
+    out = f'timebased={timebased_}-differenced={differenced_}-artificial={artificial_}'
+    if rate_:
+        out += f'-rate={rate}'
+    return out
+
+
 if __name__ == '__main__':
     eval_folder = 'eval'
     tex_folder = 'tex'
+    excel_folder = 'excel'
     if not os.path.exists(f'./{tex_folder}'):
         os.makedirs(f'./{tex_folder}')
+    if not os.path.exists(f'./{excel_folder}'):
+        os.makedirs(f'./{excel_folder}')
 
     frame = pd.DataFrame()
     for csv in glob.glob(f'{eval_folder}/*.csv'):
@@ -38,8 +53,10 @@ if __name__ == '__main__':
                 options = [True, False]
 
             for artificial in options:
+                current_name = generate_name(timebased, differenced, artificial)
+
                 # count of best mse for model on pollutant and distance
-                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                best_by_dist_and_poll = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
                         frame.differenced == differenced)][
                     ['mean_squared_error', 'model', 'distance', 'station', 'pollutant', 'rate']].sort_values(
                     by='mean_squared_error').groupby(
@@ -48,9 +65,10 @@ if __name__ == '__main__':
                     index=str, columns={'mean_squared_error': 'best_mse_count'})[
                     ['rate', 'pollutant', 'model', 'distance', 'best_mse_count']].sort_values(
                     by=['rate', 'pollutant', 'distance', 'best_mse_count'], ascending=[True, True, True, False])
+                _export_dataframe(best_by_dist_and_poll, 'best_by_dist_and_poll-' + current_name)
 
                 # count best mse for model on distance
-                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                best_by_dist = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
                         frame.differenced == differenced)][
                     ['mean_squared_error', 'model', 'distance', 'station', 'pollutant', 'rate']].sort_values(
                     by='mean_squared_error').groupby(
@@ -62,9 +80,10 @@ if __name__ == '__main__':
                     ascending=[True, True, True, False]).groupby(
                     ['rate', 'model', 'distance'], as_index=False).sum().sort_values(
                     ['rate', 'distance', 'best_mse_count'], ascending=[True, True, False])
+                _export_dataframe(best_by_dist, 'best_by_dist-' + current_name)
 
                 # count of first places by pollutant for model over mse mean by distance
-                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                best_by_poll = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
                         frame.differenced == differenced)][
                     ['mean_squared_error', 'model', 'distance', 'station', 'pollutant', 'rate']].groupby(
                     ['rate', 'model', 'station', 'pollutant'], as_index=False).mean().sort_values(
@@ -76,53 +95,63 @@ if __name__ == '__main__':
                     by=['rate', 'pollutant', 'mean_squared_error'], ascending=[True, True, False]).rename(
                     index=str, columns={'mean_squared_error': 'best_mse_by_distance_avg'}).sort_values(
                     ['rate', 'pollutant', 'best_mse_by_distance_avg'], ascending=[True, True, False])
+                _export_dataframe(best_by_poll, 'best_by_poll-' + current_name)
 
                 # split on rate to preserve internal sense of size
                 for rate in ['D', 'H']:
+                    current_name = generate_name(timebased, differenced, artificial, rate)
+
                     # General statistics for models based on rate
                     # Informative nature
-                    frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                    general_norm_measures = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
                             frame.differenced == differenced) & (frame.rate == rate)][
                         ['model', 'station', *norm_measures]].groupby(
                         ['model', ], as_index=False).agg(
                         ['mean', 'median', 'min', 'max']).reset_index().sort_values(
                         [('norm_median_absolute_error', 'mean')])
+                    _export_dataframe(general_norm_measures, 'general_norm_measures-' + current_name)
 
                     # General statistics for models based on distance and rate
                     # Informative nature
-                    frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                    distance_norm_measures = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
                             frame.differenced == differenced) & (frame.rate == rate)][
                         ['model', 'station', 'distance', *norm_measures]].groupby(
                         ['model', 'distance'], as_index=False).agg(
                         ['mean', 'median', 'min', 'max']).reset_index().sort_values(
                         ['distance', ('norm_median_absolute_error', 'mean')])
+                    _export_dataframe(distance_norm_measures, 'distance_norm_measures-' + current_name)
 
                     # General statistics for models based on pollutant and rate
                     # Informative nature
-                    frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
-                            frame.differenced == differenced) & (frame.rate == rate)][
+                    pollutant_norm_measures = frame[
+                        (~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                                frame.differenced == differenced) & (frame.rate == rate)][
                         ['model', 'station', 'pollutant', *norm_measures]].groupby(
                         ['model', 'pollutant'], as_index=False).agg(
                         ['mean', 'median', 'min', 'max']).reset_index().sort_values(
                         ['pollutant', ('norm_median_absolute_error', 'mean')])
+                    _export_dataframe(pollutant_norm_measures, 'pollutant_norm_measures-' + current_name)
 
                     # General statistics for models prediction times
                     # Informative nature
-                    frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
-                            frame.differenced == differenced) & (frame.rate == rate)][
+                    general_prediction_times = frame[
+                        (~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                                frame.differenced == differenced) & (frame.rate == rate)][
                         ['model', 'station', 'pollutant', *times]].groupby(
                         ['model'], as_index=False).agg(
                         ['mean', 'median', 'min', 'max']).reset_index().sort_values(
                         [('prediction_time', 'mean')])
+                    _export_dataframe(general_prediction_times, 'general_prediction_times-' + current_name)
 
                     # General statistics for models fit times
                     # Informative nature
-                    frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                    general_fit_times = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
                             frame.differenced == differenced) & (frame.rate == rate)][
                         ['model', 'station', 'pollutant', *times]].groupby(
                         ['model'], as_index=False).agg(
                         ['mean', 'median', 'min', 'max']).reset_index().sort_values(
                         [('fit_time', 'mean')])
+                    _export_dataframe(general_fit_times, 'general_fit_times-' + current_name)
 
                 # ###########################################################################################
                 # # model averages depending on distance, rate and pollutant. Ordered by nmae mean.
