@@ -126,7 +126,7 @@ if __name__ == '__main__':
                     ['rate', 'model', 'artificial', 'norm_mean_absolute_error']].rename(
                     index=str, columns={'norm_mean_absolute_error': 'count_best_nmae'}).sort_values(
                     ['rate', 'model', 'count_best_nmae'], ascending=[True, True, False])
-                _export_dataframe(artificial_comparison, 'best_by_artificial' + generate_name(timebased, differenced))
+                _export_dataframe(artificial_comparison, 'best_by_artificial-' + generate_name(timebased, differenced))
 
                 # count of first places for nmae split by differenced
                 differenced_comparison = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial)][
@@ -139,7 +139,7 @@ if __name__ == '__main__':
                     index=str, columns={'norm_mean_absolute_error': 'count_best_nmae'}).sort_values(
                     ['rate', 'model', 'count_best_nmae'], ascending=[True, True, False])
                 _export_dataframe(artificial_comparison,
-                                  'best_by_differenced' + generate_name(timebased, artificial_=artificial))
+                                  'best_by_differenced-' + generate_name(timebased, artificial_=artificial))
 
                 # split on rate to preserve internal sense of size
                 for rate in ['D', 'H']:
