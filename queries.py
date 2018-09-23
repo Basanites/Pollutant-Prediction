@@ -124,50 +124,50 @@ if __name__ == '__main__':
                         ['mean', 'median', 'min', 'max']).reset_index().sort_values(
                         [('fit_time', 'mean')])
 
-                ###########################################################################################
-                # model averages depending on distance, rate and pollutant. Ordered by nmae mean.
-                # Very big, only for informative purposes.
-                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
-                        frame.differenced == differenced)][
-                    ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures]].groupby(
-                    ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
-                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(
-                    ['rate', 'pollutant', 'model', 'distance', ('norm_mean_absolute_error', 'mean')])
-
-                # model averages depending on distance, rate and pollutant. Best model for pollutant and
-                # distance combo based on nmae mean.
-                # Very big, only for informative purposes.
-                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
-                        frame.differenced == differenced)][
-                    ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures]].groupby(
-                    ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
-                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(
-                    [('norm_mean_absolute_error', 'mean'), 'rate', 'pollutant', 'model', 'distance']).groupby(
-                    ['rate', 'pollutant', 'distance']).first()
-
-                # Evaluate model averages depending on distance, rate and pollutant. Best model per pollutant mae mean.
-                # Count amount of best per pollutant
-                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
-                        frame.differenced == differenced)][
-                    ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures, *times]].groupby(
-                    ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
-                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(
-                    ['rate', 'pollutant', 'distance', ('norm_mean_absolute_error', 'mean')]).groupby(
-                    ['rate', 'pollutant', 'distance']).first().groupby(
-                    ['pollutant', 'model']).count()[['rate']].rename(
-                    index=str, columns={'rate': 'best_count'}).reset_index().sort_values(
-                    ['pollutant', 'best_count'], ascending=[True, False])
-
-                # Evaluate model averages depending on distance, rate and pollutant. Best model per pollutant mae mean.
-                # Count amount of best per distance
-                frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
-                        frame.differenced == differenced)][
-                    ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures, *times]].groupby(
-                    ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
-                    ['mean', 'median', 'min', 'max']).reset_index().sort_values(
-                    ['rate', 'pollutant', 'distance', ('norm_mean_absolute_error', 'mean')]).groupby(
-                    ['rate', 'pollutant', 'distance']).first().groupby(
-                    ['distance', 'model']).count()[['rate']].rename(
-                    index=str, columns={'rate': 'best_count'}).reset_index().sort_values(
-                    ['distance', 'best_count'], ascending=[True, False])
-                ####################################################################################################
+                # ###########################################################################################
+                # # model averages depending on distance, rate and pollutant. Ordered by nmae mean.
+                # # Very big, only for informative purposes.
+                # frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                #         frame.differenced == differenced)][
+                #     ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures]].groupby(
+                #     ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
+                #     ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+                #     ['rate', 'pollutant', 'model', 'distance', ('norm_mean_absolute_error', 'mean')])
+                #
+                # # model averages depending on distance, rate and pollutant. Best model for pollutant and
+                # # distance combo based on nmae mean.
+                # # Very big, only for informative purposes.
+                # frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                #         frame.differenced == differenced)][
+                #     ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures]].groupby(
+                #     ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
+                #     ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+                #     [('norm_mean_absolute_error', 'mean'), 'rate', 'pollutant', 'model', 'distance']).groupby(
+                #     ['rate', 'pollutant', 'distance']).first()
+                #
+                # # Evaluate model averages depending on distance, rate and pollutant. Best model per pollutant mae mean.
+                # # Count amount of best per pollutant
+                # frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                #         frame.differenced == differenced)][
+                #     ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures, *times]].groupby(
+                #     ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
+                #     ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+                #     ['rate', 'pollutant', 'distance', ('norm_mean_absolute_error', 'mean')]).groupby(
+                #     ['rate', 'pollutant', 'distance']).first().groupby(
+                #     ['pollutant', 'model']).count()[['rate']].rename(
+                #     index=str, columns={'rate': 'best_count'}).reset_index().sort_values(
+                #     ['pollutant', 'best_count'], ascending=[True, False])
+                #
+                # # Evaluate model averages depending on distance, rate and pollutant. Best model per pollutant mae mean.
+                # # Count amount of best per distance
+                # frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                #         frame.differenced == differenced)][
+                #     ['model', 'distance', 'station', 'pollutant', 'rate', *norm_measures, *times]].groupby(
+                #     ['pollutant', 'model', 'rate', 'distance'], as_index=False).agg(
+                #     ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+                #     ['rate', 'pollutant', 'distance', ('norm_mean_absolute_error', 'mean')]).groupby(
+                #     ['rate', 'pollutant', 'distance']).first().groupby(
+                #     ['distance', 'model']).count()[['rate']].rename(
+                #     index=str, columns={'rate': 'best_count'}).reset_index().sort_values(
+                #     ['distance', 'best_count'], ascending=[True, False])
+                # ####################################################################################################
