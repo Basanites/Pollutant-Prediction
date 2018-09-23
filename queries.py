@@ -118,14 +118,14 @@ if __name__ == '__main__':
 
                 # count of first places for nmae split by artificial
                 artificial_comparison = frame[(~(frame.direct == timebased)) & (frame.differenced == differenced)][
-                    ['norm_mean_absolute_error', 'model', 'distance', 'station', 'pollutant', 'rate',
+                    ['mean_squared_error', 'model', 'distance', 'station', 'pollutant', 'rate',
                      'artificial']].sort_values(
-                    by='norm_mean_absolute_error').groupby(
+                    by='mean_squared_error').groupby(
                     ['station', 'rate', 'pollutant', 'distance', 'model'], as_index=False).first().groupby(
                     ['model', 'artificial', 'rate'], as_index=False).count()[
-                    ['rate', 'model', 'artificial', 'norm_mean_absolute_error']].rename(
-                    index=str, columns={'norm_mean_absolute_error': 'count_best_nmae'}).sort_values(
-                    ['rate', 'model', 'count_best_nmae'], ascending=[True, True, False])
+                    ['rate', 'model', 'artificial', 'mean_squared_error']].rename(
+                    index=str, columns={'mean_squared_error': 'best_mse_count'}).sort_values(
+                    ['rate', 'model', 'best_mse_count'], ascending=[True, True, False])
                 _export_dataframe(artificial_comparison, 'best_by_artificial-' + generate_name(timebased, differenced))
 
                 # count of first places for nmae split by differenced
