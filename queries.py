@@ -138,7 +138,7 @@ if __name__ == '__main__':
                     ['rate', 'model', 'differenced', 'norm_mean_absolute_error']].rename(
                     index=str, columns={'norm_mean_absolute_error': 'count_best_nmae'}).sort_values(
                     ['rate', 'model', 'count_best_nmae'], ascending=[True, True, False])
-                _export_dataframe(artificial_comparison,
+                _export_dataframe(differenced_comparison,
                                   'best_by_differenced-' + generate_name(timebased, artificial_=artificial))
 
                 # split on rate to preserve internal sense of size
