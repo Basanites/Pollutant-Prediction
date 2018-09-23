@@ -16,11 +16,11 @@ def _export_dataframe(df, name):
 
 def generate_name(timebased_, differenced_=None, artificial_=None, rate_=None):
     out = f'timebased={timebased_}'
-    if differenced_:
+    if differenced_ is not None:
         out += f'-differenced={differenced_}'
-    if artificial_:
+    if artificial_ is not None:
         out += f'-artificial={artificial_}'
-    if rate_:
+    if rate_ is not None:
         out += f'-rate={rate}'
     return out
 
