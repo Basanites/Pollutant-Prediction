@@ -82,19 +82,34 @@ if __name__ == '__main__':
                     ['rate', 'distance', 'best_mse_count'], ascending=[True, True, False])
                 _export_dataframe(best_by_dist, 'best_by_dist-' + current_name)
 
-                # count of first places by pollutant for model over mse mean by distance
+                # # count of first places by pollutant for model over mse mean by distance
+                # best_by_poll = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
+                #         frame.differenced == differenced)][
+                #     ['mean_squared_error', 'model', 'distance', 'station', 'pollutant', 'rate']].groupby(
+                #     ['rate', 'model', 'station', 'pollutant'], as_index=False).mean().sort_values(
+                #     by='mean_squared_error').groupby(
+                #     ['rate', 'station', 'pollutant'], as_index=False).first().sort_values(
+                #     by='mean_squared_error').groupby(
+                #     ['rate', 'model', 'pollutant'], as_index=False).count()[
+                #     ['rate', 'pollutant', 'model', 'mean_squared_error']].sort_values(
+                #     by=['rate', 'pollutant', 'mean_squared_error'], ascending=[True, True, False]).rename(
+                #     index=str, columns={'mean_squared_error': 'best_mse_by_distance_avg'}).sort_values(
+                #     ['rate', 'pollutant', 'best_mse_by_distance_avg'], ascending=[True, True, False])
+                # _export_dataframe(best_by_poll, 'best_by_poll-' + current_name)
+
                 best_by_poll = frame[(~(frame.direct == timebased)) & (frame.artificial == artificial) & (
                         frame.differenced == differenced)][
-                    ['mean_squared_error', 'model', 'distance', 'station', 'pollutant', 'rate']].groupby(
-                    ['rate', 'model', 'station', 'pollutant'], as_index=False).mean().sort_values(
+                    ['mean_squared_error', 'model', 'distance', 'station', 'pollutant', 'rate']].sort_values(
                     by='mean_squared_error').groupby(
-                    ['rate', 'station', 'pollutant'], as_index=False).first().sort_values(
-                    by='mean_squared_error').groupby(
-                    ['rate', 'model', 'pollutant'], as_index=False).count()[
-                    ['rate', 'pollutant', 'model', 'mean_squared_error']].sort_values(
-                    by=['rate', 'pollutant', 'mean_squared_error'], ascending=[True, True, False]).rename(
-                    index=str, columns={'mean_squared_error': 'best_mse_by_distance_avg'}).sort_values(
-                    ['rate', 'pollutant', 'best_mse_by_distance_avg'], ascending=[True, True, False])
+                    ['rate', 'pollutant', 'station', 'distance'], as_index=False).first().groupby(
+                    ['rate', 'distance', 'pollutant', 'model'], as_index=False).count().rename(
+                    index=str, columns={'mean_squared_error': 'best_mse_count'})[
+                    ['rate', 'pollutant', 'model', 'distance', 'best_mse_count']].sort_values(
+                    by=['rate', 'pollutant', 'distance', 'best_mse_count'],
+                    ascending=[True, True, True, False]).groupby(
+                    ['rate', 'model', 'pollutant'], as_index=False).sum().sort_values(
+                    ['rate', 'pollutant', 'best_mse_count'], ascending=[True, True, False])[
+                    ['rate', 'pollutant', 'model', 'best_mse_count']]
                 _export_dataframe(best_by_poll, 'best_by_poll-' + current_name)
 
                 # split on rate to preserve internal sense of size
