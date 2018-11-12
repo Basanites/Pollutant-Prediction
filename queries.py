@@ -49,7 +49,28 @@ if __name__ == '__main__':
     times = ['fit_time', 'prediction_time']
     norm_measures = [f'norm_{measure}' for measure in measures]
 
+
+
     for timebased in [True, False]:
+
+        # statistical information about prediction times in general
+        current_name = generate_name(timebased)
+        general_prediction_times = frame[~(frame.direct == timebased)][
+            ['model', 'station', 'pollutant', *times]].groupby(
+            ['model'], as_index=False).agg(
+            ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+            [('prediction_time', 'mean')])
+        _export_dataframe(general_prediction_times, 'general_prediction_times-' + current_name)
+
+        # statistical information about fit times in general
+        current_name = generate_name(timebased)
+        general_fit_times = frame[~(frame.direct == timebased)][
+            ['model', 'station', 'pollutant', *times]].groupby(
+            ['model'], as_index=False).agg(
+            ['mean', 'median', 'min', 'max']).reset_index().sort_values(
+            [('fit_time', 'mean')])
+        _export_dataframe(general_fit_times, 'general_fit_times-' + current_name)
+
         for differenced in [True, False]:
             if timebased:
                 options = [False]
@@ -152,7 +173,7 @@ if __name__ == '__main__':
                         ['model', 'station', *norm_measures]].groupby(
                         ['model', ], as_index=False).agg(
                         ['mean', 'median', 'min', 'max']).reset_index().sort_values(
-                        [('norm_median_absolute_error', 'mean')])
+                        [('norm_mean_absolute_error', 'mean')])
                     _export_dataframe(general_norm_measures, 'general_norm_measures-' + current_name)
 
                     # General statistics for models based on distance and rate
@@ -162,7 +183,7 @@ if __name__ == '__main__':
                         ['model', 'station', 'distance', *norm_measures]].groupby(
                         ['model', 'distance'], as_index=False).agg(
                         ['mean', 'median', 'min', 'max']).reset_index().sort_values(
-                        ['distance', ('norm_median_absolute_error', 'mean')])
+                        ['distance', ('norm_mean_absolute_error', 'mean')])
                     _export_dataframe(distance_norm_measures, 'distance_norm_measures-' + current_name)
 
                     # General statistics for models based on pollutant and rate
