@@ -1,13 +1,18 @@
-# Bachelorthesis
+# Atmospheric Pollutant Prediction
 
-The purpose of this software is to enable a comparison of different statistical models for time series prediction.
+The purpose of this software is to compare different models used for predictions on the specific use case of air pollutant data.
+The used data is sourced from the [EEA E1a and E2a download service](http://discomap.eea.europa.eu/map/fme/AirQualityExport.htm).
 
+The program is based on python3.6.
+To install the requirements run
+```
+pip install -r requirements.txt
+```
 
-To start the program first convert your input data by running
+For a regular analysis process run
 ```
-python3 converter.py
-```
-and then running
-```
-python3 main.py
+python converter.py
+python parameter_estimation.py
+python evaluation.py
+python queries.py
 ```
