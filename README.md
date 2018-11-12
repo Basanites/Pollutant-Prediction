@@ -1,7 +1,7 @@
 # Atmospheric Pollutant Prediction
 
 The purpose of this software is to compare different models used for predictions on the specific use case of air pollutant data.
-The used data is sourced from the [EEA E1a and E2a download service](http://discomap.eea.europa.eu/map/fme/AirQualityExport.htm).
+The used data is sourced from the [EEA E1a and E2a download service](http://discomap.eea.europa.eu/map/fme/AirQualityExport.htm) and downloaded CSVs need to be placed in ./res.
 
 The program is based on python3.6.
 To install the requirements run
